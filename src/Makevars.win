@@ -1,0 +1,21 @@
+PKG_CFLAGS = $(C_VISIBILITY)
+ifeq ($(y	),i386)
+   ifdef LIB_FFTW32
+           FLV = i386
+           LIB_FFTW32_Unix=$(subst \,/,$(LIB_FFTW32))
+           PKG_LIBS = -L"$(LIB_FFTW32_Unix)/fftw/lib/fftw3" -lfftw3-3
+           PKG_CPPFLAGS = -I"$(LIB_FFTW32_Unix)/include"
+    else
+           PKG_LIBS = -lfftw3
+    endif
+else
+   ifdef LIB_FFTW64
+           FLV = AMD64
+           LIB_FFTW64_Unix=$(subst \,/,$(LIB_FFTW64))
+           PKG_LIBS = -L"$(LIB_FFTW64_Unix)/lib/fftw3" -lfftw3-3
+           PKG_CPPFLAGS = -I"$(LIB_FFTW64_Unix)/include"
+    else
+           PKG_LIBS = -lfftw3
+    endif
+endif
+
