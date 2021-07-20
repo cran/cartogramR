@@ -19,7 +19,7 @@
 #'     number of vertice divided by the perimeter of the region
 #'
 #' @importFrom grDevices devAskNewPage
-#' @importFrom graphics barplot lines legend
+#' @importFrom graphics plot barplot lines legend
 #' @importFrom stats density
 #' @export
 #' @examples

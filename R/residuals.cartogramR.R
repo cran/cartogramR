@@ -48,7 +48,7 @@ residuals.cartogramR <- function(object, ...) {
   req_options <- names(argsup)
   default_options[req_options] <- argsup
   type <- match.arg(default_options$type, choices=c("relative error", "error", "symmetric difference"))
-   if (type=="error") {
+  if (type=="error") {
     r <- object$final_area - object$target_area
     return(r)
   }
@@ -68,28 +68,41 @@ residuals.cartogramR <- function(object, ...) {
       area <- sf::st_area(mpoly)
       (mpoly - center)/sqrt(area)
     }
+    if (sf::sf_extSoftVersion()["GEOS"] < "3.8.0") {
+      if (!requireNamespace("lwgeom", quietly = TRUE))
+        stop("update GEOS (version >= 3.8.0 needed) OR install package lwgeom")
+      make_valid_sfg <- function(x) {
+        valpol <- lwgeom::lwgeom_make_valid(sf::st_geometry(x))[[1]]
+      }
+    } else {
+      make_valid_sfg <- function(x) {
+        valpol <- sf::st_make_valid(x)
+      }
+    }
     for (i in 1:n_reg) {
       center_orig <-
         switch(center,
                point_on_surface=sf::st_coordinates(
                                       sf::st_point_on_surface(
-                                            sf::st_geometry(object$initial_data)[[i]]))[1,],
+                                            make_valid_sfg(sf::st_geometry(object$initial_data)[[i]])))[1,],
                deformed_center=object$orig_centers[i,],
                centroid=sf::st_coordinates(
                               sf::st_centroid(
-                                    sf::st_geometry(object$initial_data)[[i]]))[1,])
+                                    make_valid_sfg(sf::st_geometry(object$initial_data)[[i]])))[1,])
 
-      center_final <-
+               center_final <-
         switch(center,
                point_on_surface=sf::st_coordinates(
-                                      sf::st_point_on_surface(object$cartogram[[i]]))[1,],
+                                      sf::st_point_on_surface(
+                                            make_valid_sfg( object$cartogram[[i]])))[1,],
                deformed_center=object$final_centers[i,],
-               centroid=sf::st_coordinates(sf::st_centroid(object$cartogram[[i]]))[1,])
+               centroid=sf::st_coordinates(
+                              sf::st_centroid(
+                                    make_valid_sfg(object$cartogram[[i]])))[1,])
       original_mp <- standardize(y_geom[[i]],center_orig)
       final_mp <- standardize(object$cartogram[[i]],center_final)
-      delta[i] <- 1 - sf::st_area(
-                            sf::st_intersection(
-                                  original_mp,sf::st_make_valid(final_mp)))
+      valpol <- make_valid_sfg(final_mp)
+      delta[i] <- 1 - sf::st_area(sf::st_intersection(original_mp, valpol))
     }
     return(delta)
   }

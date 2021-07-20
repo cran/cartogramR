@@ -1,7 +1,7 @@
 \name{france_rivers}
 \docType{data}
 \alias{france_rivers}
-\title{Map of the population of mainland France (year 2020)}
+\title{Map of french rivers  of mainland France}
 \description{
   This data set is a basemap of mainland french rivers (\code{name} or \code{id}).
 }

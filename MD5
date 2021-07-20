@@ -1,6 +1,6 @@
-256eabcf3c75153d4e699c6c5af701e0 *DESCRIPTION
+ce29b3261a0a840bc0a712c8b44ffaea *DESCRIPTION
 c684a6b0320d2e965ddd4f3e44bbd493 *LICENSE
-0cb74758940a6b23d6888caa5c63220b *NAMESPACE
+e68741b0e9fe0a777dbcd43326e5e0e0 *NAMESPACE
 2aa075167bebb38474b2ca0d32a91bcd *R/as.sf.R
 a26a39f93ac3db0a1880a2e5fc4fafe1 *R/as.sf.cartogramR.R
 56786167e40078656770386bd072b238 *R/as.sfc.R
@@ -15,12 +15,12 @@ ec8039e87d930cfa050ac33c1be0a2f1 *R/from_coord_polygon.R
 95d1161809bf3526569fb60bcf04c07a *R/grid_analysis.R
 30910f37d454dbd69350ab81b2d7cb73 *R/make_layer.R
 e92eadfb094c7346f184e180c86e10fa *R/plot.cartogramR.R
-87fa2052637b922f432e12ab5e9613fb *R/plot.dbv.cartogramR.R
+a277edeae03e1a72857782a9b698a4b2 *R/plot.dbv.cartogramR.R
 75e9865fa93f3b501bd365e7373a79b0 *R/plot.gridanalysis.cartogramR.R
 85a5179b450941a750cd5df531b09c60 *R/precartogramR.R
 80aef53a265ccf662ed9dbcd87dbed37 *R/print.cartogramR.R
 3534845eb8df7fa1e35e8a625c94cb82 *R/print.summary.cartogramR.R
-8cf186ba75d04f0dda111e605a5a6ae1 *R/residuals.cartogramR.R
+e82abb1af497ff5001ce28bcd282db10 *R/residuals.cartogramR.R
 2ed26ecb32d8e6c2ae455fa6ec2808f1 *R/summary.cartogramR.R
 5646e9363cade99697466e35db57f78a *R/summary.dbv.cartogramR.R
 98be277cea6fdfefadeb72b0b04833ae *R/summary.gridanalysis.cartogramR.R
@@ -30,6 +30,7 @@ e92eadfb094c7346f184e180c86e10fa *R/plot.cartogramR.R
 63616abd9423d46f354628efd6161116 *data/france_dept.rda
 f660c706103c1f968a96d5f89ff30b46 *data/france_rivers.rda
 7ff3506b8418e0b1c5f9be2462cfc3c8 *data/usa.rda
+840881e2983f7594e7b6ed4491cfaaa5 *inst/doc/README.md
 4bf8a87c5e6ad4286a7241ce1269a8d1 *man/as.sf.Rd
 72835eb901c0f6d3bbec1ba9a062376b *man/as.sf.cartogramR.Rd
 c5db52f565860fdb28dae33d125f3ef5 *man/as.sfc.Rd
@@ -39,8 +40,8 @@ ec8c7cf19ff0bd71239d9f7766b9d8e1 *man/as.sfc.cartogramR.Rd
 ab53c540b028a2b9f9fe8fea3189a307 *man/cartogramR_options.Rd
 892f2c1be1d7d35f13a89d68fb8d1c19 *man/check_ring_dir.Rd
 b8b8dd49b776f383758c9cf9fa7b0021 *man/dist_between_vertices.Rd
-9ee9c99798a6ab79998b288c54651720 *man/france_dept.Rd
-f6ac7a45498eacbd859768306240ce6e *man/france_rivers.Rd
+1d6496d67a06ffe7c452838522a8ac6b *man/france_dept.Rd
+dc288286df8d9c5d06075325ee353b8a *man/france_rivers.Rd
 a655ffc830b1559d3b6e7ca83f2d7d9a *man/from_coord_polygon.Rd
 bce4debf18092e9c74045b47cb0f1d1c *man/geom_cartogramR.Rd
 a314a2a3cfaecc68c2b3ab5f814b16ee *man/grid_analysis.Rd
@@ -87,6 +88,7 @@ b06ff4e4cef2a3ba39515ffba92a67e2 *src/iocartogramR.c
 4b0acf7b0a10418064b0fa8265019875 *src/makegraticule.h
 e60bb35315fd98073cd21f1614690f55 *src/read_gen.c
 6c95320a63fb38761252241a6e37da3b *src/typepoint.h
+a80b57879183b0394556e8e332d1bac4 *tests/Rplots.pdf
 4d7776bf0c03c92dd6c912390a7c3be6 *tests/dcn.R
 6884b65a6e4256f59ee8e9feb92df4f3 *tests/dcn.Rout
 5fd97f4cf63089f0efd80770274d2c5e *tests/gn.R
