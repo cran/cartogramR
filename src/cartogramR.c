@@ -298,7 +298,7 @@ SEXP cartogramR (SEXP rcentroidx, SEXP rcentroidy, SEXP rygeomd,
 
     /* third: export the cartogram in the R object sf geometry */
     ctrpoly=0;
-    double minx, maxx, miny, maxy;
+    double minx=0.0, maxx=0.0, miny=0.0, maxy=0.0;
     for (i=0; i<n_rows; i++) {
       rlistcoord = PROTECT(VECTOR_ELT(rygeom, i));
       nbinpoly = length(rlistcoord);
@@ -592,7 +592,7 @@ SEXP cartogramR (SEXP rcentroidx, SEXP rcentroidy, SEXP rygeomd,
 
     /* third: export the cartogram in the R object sf geometry */
     ctrpoly=0;
-    double minx, maxx, miny, maxy;
+    double minx=0.0, maxx=0.0, miny=0.0, maxy=0.0;
     for (i=0; i<n_rows; i++) {
       rlistcoord = PROTECT(VECTOR_ELT(rygeom, i));
       nbinpoly = length(rlistcoord);

@@ -123,8 +123,8 @@ SEXP makeoriggraticule (SEXP rpadding, SEXP rLL, SEXP rbbox)
   /*  each component i is a list of 1 component (EXT, no hole) */
   /*  this component EXT is a matrix 5x2 of vertices*/
   /************************************************************************/
-  double coordx, coordy, coordxp1, coordyp1, minx, miny,
-    maxx, maxy, *bbox2, *coord;
+  double coordx, coordy, coordxp1, coordyp1, minx=0.0, miny=0.0,
+    maxx=0.0, maxy=0.0, *bbox2, *coord;
    for (i=0; i<(lx); i++) {
     rcolans  = PROTECT(allocVector(VECSXP, ly));
       for (j=0; j<(ly); j++) {
@@ -272,8 +272,8 @@ SEXP makefinalgraticule (SEXP rpadding, SEXP rLL, SEXP rbbox,
   xdisp = (double *) R_alloc(lx*ly, sizeof(double));
   ydisp = (double *) R_alloc(lx*ly, sizeof(double));
   /* error */
-  int errorloc=0, *options;
-
+  int errorloc=0, valoption=0, *options;
+  options = &valoption;
   /************************************************************************/
   /* result  R list of lx components */
   /************************************************************************/
@@ -336,7 +336,7 @@ SEXP makefinalgraticule (SEXP rpadding, SEXP rLL, SEXP rbbox,
   double coordx00, coordx10, coordx11, coordx01,
     coordy00, coordy10, coordy11, coordy01,
     minxp, minyp, maxxp, maxyp, ctx, ctxp1, cty, ctyp1,
-    minx, miny, maxx, maxy, *bbox2, *coord;
+    minx=0.0, miny=0.0, maxx=0.0, maxy=0.0, *bbox2, *coord;
    for (i=0; i<(lx); i++) {
     rcolans  = PROTECT(allocVector(VECSXP, ly));
       for (j=0; j<(ly); j++) {

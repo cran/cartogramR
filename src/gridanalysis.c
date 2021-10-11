@@ -24,11 +24,10 @@
  * \param  rLL : SEXP, the value of L in cartogram  (default is 512),
  *         must be a power of two (for fftw)
  * \param  rbbox: SEXP, the bounding box in cartogram
- * \param  roptions Integer vector of options
  * \return rans : SEXP, The R list of sfg POINT (the grid)
  *******************************************************************/
 
-SEXP gridanalysis (SEXP rpadding, SEXP rLL, SEXP rbbox, SEXP roptions)
+SEXP gridanalysis (SEXP rpadding, SEXP rLL, SEXP rbbox)
 {
   /*****************************************************************************/
   /* input and output from/to R */
@@ -47,10 +46,8 @@ SEXP gridanalysis (SEXP rpadding, SEXP rLL, SEXP rbbox, SEXP roptions)
   padding = REAL(rpadding)[0];
   /* integer : option(s)   */
   rLL = PROTECT(rLL);
-  roptions = PROTECT(roptions);
-  int LL, *options;
+  int LL;
   LL = INTEGER(rLL)[0];
-  options = INTEGER(roptions);
   /************************************************************************/
   /* local variables */
   /************************************************************************/
@@ -114,16 +111,9 @@ SEXP gridanalysis (SEXP rpadding, SEXP rLL, SEXP rbbox, SEXP roptions)
    /* attribute crs */
    setAttrib(rans, install("crs"), rcrs);
   /************************************************************************/
-  /* class of  each component of rans  */
-  /************************************************************************/
-  rclass = PROTECT(allocVector(STRSXP, 3));
-  SET_STRING_ELT(rclass, 0, mkChar("XY"));
-  SET_STRING_ELT(rclass, 1, mkChar("POINT"));
-  SET_STRING_ELT(rclass, 2, mkChar("sfg"));
-  /************************************************************************/
   /* Grid  */
   /************************************************************************/
-  double coordx, coordy, minx, miny, maxx, maxy, *bbox2;
+  double coordx, coordy, minx=0.0, miny=0.0, maxx=0.0, maxy=0.0, *bbox2;
    iter=0;
    for (i=0; i<lx; i++) {
       for (j=0; j<ly; j++) {
@@ -145,12 +135,18 @@ SEXP gridanalysis (SEXP rpadding, SEXP rLL, SEXP rbbox, SEXP roptions)
 	  maxy=fmax2(maxy, coordy);
 	}
 	/* save  */
+    /* class of rcoord =  each component of rans */
+    rclass = PROTECT(allocVector(STRSXP, 3));
+    SET_STRING_ELT(rclass, 0, mkChar("XY"));
+    SET_STRING_ELT(rclass, 1, mkChar("POINT"));
+    SET_STRING_ELT(rclass, 2, mkChar("sfg"));
+    /* rcoord */
 	rcoord  = PROTECT(allocVector(REALSXP, 2));
 	REAL(rcoord)[0] = coordx;
 	REAL(rcoord)[1] = coordy;
 	classgets(rcoord, rclass);
 	SET_VECTOR_ELT(rans, iter, rcoord);
-	UNPROTECT(1);
+	UNPROTECT(2); /* rcoord + rclass */
 	iter++;
       }
     }
@@ -177,8 +173,9 @@ SEXP gridanalysis (SEXP rpadding, SEXP rLL, SEXP rbbox, SEXP roptions)
    /* set bbox attribute to rans */
    setAttrib(rans, install("bbox"), rbbox2);
    /* unprotect and return */
-   UNPROTECT(6);
    UNPROTECT(9); /* class and attributes */
+    UNPROTECT(1); /* rans */
+   UNPROTECT(3); /* function arguments */
    return rans;
    /* class for ans */
 }

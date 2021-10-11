@@ -28,7 +28,7 @@ grid_analysis <- function(data, gridpower2=8:11, pf=1.5, verbose=FALSE) {
     for (j in seq_along(gridpower2)) {
         if (verbose) cat(paste("starting L=2^",gridpower2[j],"\n",sep=""))
         if (verbose) cat(paste("  - making the grid ",2^gridpower2[j],"x",2^gridpower2[j],"\n",sep=""))
-        grille <- .Call(carto_gridanalysis,pf , as.integer(LL[j]), bbox, as.integer(verbose))
+        grille <- .Call(carto_gridanalysis,pf , as.integer(LL[j]), bbox)
         sf::st_crs(grille) <- sf::st_crs(y_geom)
         if (verbose) cat("  - intersection polygon/grid using sf (slow step)\n")
         pointsinpoly <- sf::st_intersects(y_geom,grille)

@@ -66,9 +66,11 @@ a list to be processed by \link{cartogramR}
 Set the options of \link{cartogramR} in the correct format
 }
 \examples{
+\donttest{
   data(usa)
   carto1 <- cartogramR(usa, "electors64", options=list(verbose=1, L=256))
   plot(carto1)
+}
 
 }
 \references{

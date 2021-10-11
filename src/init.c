@@ -14,7 +14,7 @@ static const R_CallMethodDef R_CallDef[] = {
   CALLDEF(makefinalgraticule, 5),
   CALLDEF(makeoriggraticule, 3),
   CALLDEF(invcarto, 7),
-  CALLDEF(gridanalysis, 4),
+  CALLDEF(gridanalysis, 3),
   CALLDEF(geomcarto, 8),
   CALLDEF(dcn, 12),
   CALLDEF(checkring, 3),

@@ -167,9 +167,12 @@ SEXP dcn (SEXP rygeomd, SEXP rx, SEXP ry, SEXP rcount,
     if (areasObj[i] > 0.0)
       min_area = fmin2(min_area, areasObj[i]);
     }
-  for (i=0; i<nmp; i++)
+  for (i=0; i<nmp; i++) {
     if (areasObj[i] == 0.0)
       areasObj[i] = MIN_POP_FAC * min_area;
+    /* init areasmpOld for valgrind */
+    areasmpOld[i] = areasObj[i];
+    }
   /* Radius/Mass/Error and finalization of objective Areas */
   meansizeError=0;
   maxrelError=0;
@@ -197,9 +200,9 @@ SEXP dcn (SEXP rygeomd, SEXP rx, SEXP ry, SEXP rcount,
   /* mean of size error */
   meansizeError /= nmp;
   /* forcereduction factor */
-  forceReductionFactor = 1/(1+ pow(100, 1/(iter+1)) * meansizeError);
+  forceReductionFactor = 1/(1+  meansizeError);
   /* 1/(1+ 1 * meansizeError); */
-  if (verbose==1) Rprintf("forceReductionFactor %.6f\n", forceReductionFactor);
+  /* if (verbose==1) Rprintf("forceReductionFactor %.6f\n", forceReductionFactor); */
 /* verbose ? */
   if (verbose>1) Rprintf("Initial state\n",meansizeError);
   if (verbose>1) Rprintf(" * Max of abs or relative error %.6f\n", maxrelError);
@@ -244,8 +247,8 @@ SEXP dcn (SEXP rygeomd, SEXP rx, SEXP ry, SEXP rcount,
       /* mean of size error */
       meansizeError /= nmp;
       /* forcereduction factor */
-      forceReductionFactor = 1/(1+ pow(100, 1/(iter+1)) * meansizeError);
-      if (verbose==1) Rprintf("forceReductionFactor %.6f -- meansizeError %.6f\n", forceReductionFactor, meansizeError);
+      forceReductionFactor = 1/(1+ meansizeError);
+      /* if (verbose==1) Rprintf("forceReductionFactor %.6f -- meansizeError %.6f\n", forceReductionFactor, meansizeError); */
       if (verbose>1) Rprintf("Iteration %d\n", iter+1);
       if (verbose>1) Rprintf(" * Max of abs or relative error %.6f\n", maxrelError);
       if (verbose>1) Rprintf(" * Mean size error %.8f\n", meansizeError);
@@ -312,7 +315,7 @@ SEXP dcn (SEXP rygeomd, SEXP rx, SEXP ry, SEXP rcount,
   /************************************************************************/
   /* result  R list of nmp components */
   /************************************************************************/
-  double  minx, miny, maxx, maxy, *bbox, *exthole;
+  double  minx=0.0, miny=0.0, maxx=0.0, maxy=0.0, *bbox, *exthole;
   int nmpol, npol, ncoo, firstline;
   SEXP rmpol, rpol, rexthole, rbbox, rnamesbbox, rclassbbox;
   iter=0;

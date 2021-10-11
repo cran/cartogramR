@@ -124,7 +124,7 @@ SEXP geomcarto (SEXP rygeom, SEXP rmultipoly, SEXP rgridx, SEXP rgridy, SEXP rpa
   int nbinpoly, nbpts,  nblistmulti;
 
   SEXP rlistcoord2,  rcoordvert2, rlistmulti2;
-  double *coordvert2, coordx, coordy, coordxx, coordyy, minx, miny, maxx, maxy;
+  double *coordvert2, coordx, coordy, coordxx, coordyy, minx=0.0, miny=0.0, maxx=0.0, maxy=0.0;
   iter=0;
   for (i=0; i<n_rows; i++) {
     rlistcoord2 = PROTECT(VECTOR_ELT(rygeom2, i));
