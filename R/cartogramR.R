@@ -157,6 +157,7 @@ if (method=="dcn") {
     if (currentoptions$options["gridexport"]) {
       names(results) <- c("cartogram","orig_area","final_area","orig_centers","final_centers","gridx","gridy")
       } else {
+        results <- results[-(6:7)]
         names(results) <- c("cartogram","orig_area","final_area","orig_centers","final_centers")
         }
     }

@@ -55,8 +55,12 @@ geom_cartogramR <- function(sfgeom, carto, verbose=FALSE) {
   }
   LL <-  carto$options$paramsint[1]
   padding <- carto$options$paramsdouble[3]
-  n <- length(sfgeom)
+  n <- length(sfgeomb)
   bbox <- sf::st_bbox(carto$initial_data)
+  sfgeombbox <- sf::st_bbox(sfgeomb)
+  if (!(((bbox["xmin"] <= sfgeombbox["xmin"]) & (bbox["ymin"] <= sfgeombbox["ymin"])) &
+        ((sfgeombbox["xmax"]  <= bbox["xmax"]) & (sfgeombbox["ymax"] <= bbox["ymax"]))))
+   stop("Some part of the sfgeom is outside the bounding box of the cartogram.")
   nombb <- names(bbox)
   multipolygons <- rep(NA, n)
   sp <- unlist(lapply(sfgeomb, function(x) inherits(x, "POINT")))

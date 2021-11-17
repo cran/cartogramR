@@ -34,7 +34,7 @@ SEXP gridanalysis (SEXP rpadding, SEXP rLL, SEXP rbbox)
   /*****************************************************************************/
   /* list output is an R object */
   SEXP  rans, rcoord, rclass, rclassans, rcrs, rclasscrs, rnames,
-    rnamesbbox, rclassbbox, rbbox2;
+    rnamesbbox, rclassbbox, rbbox2, rscalarreal, rscalarinteger;
   /*****************************************************************************/
   /* processing input  from R */
   /*****************************************************************************/
@@ -84,8 +84,10 @@ SEXP gridanalysis (SEXP rpadding, SEXP rLL, SEXP rbbox)
    SET_STRING_ELT(rclassans, 0, mkChar("sfc_POINT"));
    SET_STRING_ELT(rclassans, 1, mkChar("sfc"));
    classgets(rans, rclassans);
-   setAttrib(rans, install("precision"), ScalarReal(0));
-   setAttrib(rans, install("n_empty"), ScalarInteger(0));
+   rscalarreal = PROTECT(ScalarReal(0));
+   rscalarinteger = PROTECT(ScalarInteger(0));
+   setAttrib(rans, install("precision"), rscalarreal);
+   setAttrib(rans, install("n_empty"), rscalarinteger);
   /************************************************************************/
   /* attribute for ans : crs */
   /* list of two components : 2 vectors of character, NA and NA */
@@ -173,6 +175,7 @@ SEXP gridanalysis (SEXP rpadding, SEXP rLL, SEXP rbbox)
    /* set bbox attribute to rans */
    setAttrib(rans, install("bbox"), rbbox2);
    /* unprotect and return */
+    UNPROTECT(2); /* rscalarS */
    UNPROTECT(9); /* class and attributes */
     UNPROTECT(1); /* rans */
    UNPROTECT(3); /* function arguments */

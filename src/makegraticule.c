@@ -35,7 +35,8 @@ SEXP makeoriggraticule (SEXP rpadding, SEXP rLL, SEXP rbbox)
   /*****************************************************************************/
   /* list output is an R object */
   SEXP  rans, rcoord, rclass, rclassans, rcrs, rclasscrs, rnames,
-    rnamesbbox, rclassbbox, rbbox2, rcolans, rpolygext;
+    rnamesbbox, rclassbbox, rbbox2, rcolans, rpolygext, rscalarreal,
+    rscalarinteger;
   /*****************************************************************************/
   /* processing input  from R */
   /*****************************************************************************/
@@ -84,8 +85,10 @@ SEXP makeoriggraticule (SEXP rpadding, SEXP rLL, SEXP rbbox)
    SET_STRING_ELT(rclassans, 0, mkChar("sfc_MULTIPOLYGON"));
    SET_STRING_ELT(rclassans, 1, mkChar("sfc"));
    classgets(rans, rclassans);
-   setAttrib(rans, install("precision"), ScalarReal(0));
-   setAttrib(rans, install("n_empty"), ScalarInteger(0));
+   rscalarreal = PROTECT(ScalarReal(0));
+   rscalarinteger = PROTECT(ScalarInteger(0));
+   setAttrib(rans, install("precision"), rscalarreal);
+   setAttrib(rans, install("n_empty"), rscalarinteger);
   /************************************************************************/
   /* attribute for ans : crs */
   /* list of two components : 2 vectors of character, NA and NA */
@@ -194,6 +197,7 @@ SEXP makeoriggraticule (SEXP rpadding, SEXP rLL, SEXP rbbox)
    /* set bbox attribute to rans */
    setAttrib(rans, install("bbox"), rbbox2);
    /* unprotect and return */
+   UNPROTECT(2);/*rscalarS*/
    UNPROTECT(6);
    UNPROTECT(8); /* class and attributes */
    return rans;
@@ -228,7 +232,8 @@ SEXP makefinalgraticule (SEXP rpadding, SEXP rLL, SEXP rbbox,
   /*****************************************************************************/
   /* list output is an R object */
   SEXP  rans, rcoord, rclass, rclassans, rcrs, rclasscrs, rnames,
-    rnamesbbox, rclassbbox, rbbox2, rcolans, rpolygext;
+    rnamesbbox, rclassbbox, rbbox2, rcolans, rpolygext,
+    rscalarreal, rscalarinteger;
   /*****************************************************************************/
   /* processing input  from R */
   /*****************************************************************************/
@@ -285,8 +290,10 @@ SEXP makefinalgraticule (SEXP rpadding, SEXP rLL, SEXP rbbox,
    SET_STRING_ELT(rclassans, 0, mkChar("sfc_MULTIPOLYGON"));
    SET_STRING_ELT(rclassans, 1, mkChar("sfc"));
    classgets(rans, rclassans);
-   setAttrib(rans, install("precision"), ScalarReal(0));
-   setAttrib(rans, install("n_empty"), ScalarInteger(0));
+   rscalarreal = PROTECT(ScalarReal(0));
+   rscalarinteger = PROTECT(ScalarInteger(0));
+   setAttrib(rans, install("precision"), rscalarreal);
+   setAttrib(rans, install("n_empty"), rscalarinteger);
   /************************************************************************/
   /* attribute for ans : crs */
   /* list of two components : 2 vectors of character, NA and NA */
@@ -431,6 +438,7 @@ SEXP makefinalgraticule (SEXP rpadding, SEXP rLL, SEXP rbbox,
    /* set bbox attribute to rans */
    setAttrib(rans, install("bbox"), rbbox2);
    /* unprotect and return */
+   UNPROTECT(2);/*rscalarS*/
    UNPROTECT(8);
    UNPROTECT(8); /* class and attributes */
    return rans;
@@ -438,30 +446,3 @@ SEXP makefinalgraticule (SEXP rpadding, SEXP rLL, SEXP rbbox,
 }
 
 
-/* 	/\* control bbox *\/ */
-/*           /\* coordx00= controlinsidebb(coordx00, 0, lx) ; *\/ */
-/*           /\* coordx10= controlinsidebb(coordx10, 0, lx) ; *\/ */
-/*           /\* coordx11= controlinsidebb(coordx11, 0, lx) ; *\/ */
-/*           /\* coordx01= controlinsidebb(coordx01, 0, lx) ; *\/ */
-/*           /\* coordy00= controlinsidebb(coordy00, 0, ly) ; *\/ */
-/*           /\* coordy10= controlinsidebb(coordy10, 0, ly) ; *\/ */
-/*           /\* coordy11= controlinsidebb(coordy11, 0, ly) ; *\/ */
-/*           /\* coordy01= controlinsidebb(coordy01, 0, ly) ; *\/ */
-/*            if (coordx00>lx) Rprintf("ERROR: coordx00.\n"); */
-/*            if (coordx10>lx) Rprintf("ERROR: coordx10.\n"); */
-/*            if (coordx11>lx) Rprintf("ERROR: coordx11.\n"); */
-/*            if (coordx01>lx) Rprintf("ERROR: coordx01.\n"); */
-/* ** \fn controlinsidebb */
-/*  *  \brief Control if coordinate is inside bounding box */
-/*  * */
-/*  * \param  coord */
-/*  * \param  mini  minimal value */
-/*  * \param  maxi  maximal value */
-/*  * \return rans : the corrected value */
-/*  *******************************************************************\/ */
-/* double controlinsidebb (double coord, double mini, double maxi) */
-/* { */
-/*   if (coord < mini) coord= mini; */
-/*   if (coord > maxi) coord= maxi; */
-/*   return coord; */
-/* } */

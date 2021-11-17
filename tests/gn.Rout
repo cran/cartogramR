@@ -1,5 +1,5 @@
 
-R version 4.0.4 (2021-02-15) -- "Lost Library Book"
+R Under development (unstable) (2021-08-27 r80829) -- "Unsuffered Consequences"
 Copyright (C) 2021 The R Foundation for Statistical Computing
 Platform: x86_64-pc-linux-gnu (64-bit)
 
@@ -57,4 +57,4 @@ MULTIPOLYGON (((-872288 -637243, -872398 -633009, -872559 -626449, -872568 -6262
 > 
 > proc.time()
    user  system elapsed 
-  2.163   0.742   1.580 
+  1.950   0.688   1.311 

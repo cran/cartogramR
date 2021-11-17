@@ -41,6 +41,9 @@ void inv_rescale_map (double* centroidx, double* centroidy, int* n_polycorn, int
 	 lx, ly, new_minx, new_miny, new_maxx, new_maxy);
 
   /********************* Rescale all polygon coordinates. ********************/
+ if (options[0]>1) Rprintf("Rescaling polygon coordinates with %f.\n",
+	 latt_const);
+
 
   for (i=0; i<n_poly; i++)
     for (j=0; j<n_polycorn[i]; j++) {

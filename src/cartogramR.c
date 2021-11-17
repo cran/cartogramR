@@ -158,11 +158,7 @@ SEXP cartogramR (SEXP rcentroidx, SEXP rcentroidy, SEXP rygeomd,
   /* [[7]] grid y matrix */
   /*------------------------------------------------------------*/
   SEXP rans;
-  if (gridexport) {
     rans = PROTECT(allocVector(VECSXP, 7));
-  } else {
-    rans = PROTECT(allocVector(VECSXP, 5));
-  }
   SEXP rfinal_area, roriginal_area;
   roriginal_area = PROTECT(allocVector(REALSXP, n_reg));
   rfinal_area = PROTECT(allocVector(REALSXP, n_reg));
@@ -257,7 +253,10 @@ SEXP cartogramR (SEXP rcentroidx, SEXP rcentroidy, SEXP rygeomd,
   } else {
     /* the first time we need to rescale the abserror criterion on cartogram scale */
     scale_map = scale_map_factor();
-    MAX_PERMITTED_AREA_ERROR /= scale_map;
+     if (options[0]>1) Rprintf("initial max permitted area error: %f\n", MAX_PERMITTED_AREA_ERROR);
+     if (options[0]>1) Rprintf("scale map: %f\n", scale_map);
+    MAX_PERMITTED_AREA_ERROR /= (scale_map * scale_map);
+         if (options[0]>1) Rprintf("rescale max permitted area error: %f\n", MAX_PERMITTED_AREA_ERROR);
     curcrit = max_absarea_err(area_err, cart_area, n_polycorn, polycorn, &init_tot_area);
   }
   if (curcrit <= MAX_PERMITTED_AREA_ERROR) {
@@ -265,10 +264,11 @@ SEXP cartogramR (SEXP rcentroidx, SEXP rcentroidy, SEXP rygeomd,
     /* -------------------------------------------------------- */
     /* Export the grid if needed */
     /* -------------------------------------------------------- */
+    SEXP ransx, ransy;
     if (gridexport) {
       /* export grid */
-      SEXP ransx = PROTECT(allocMatrix(REALSXP, ly, lx));
-      SEXP ransy = PROTECT(allocMatrix(REALSXP, ly, lx));
+      ransx = PROTECT(allocMatrix(REALSXP, ly, lx));
+      ransy = PROTECT(allocMatrix(REALSXP, ly, lx));
       double *ansx = REAL(ransx);
       double *ansy = REAL(ransy);
       for (i=0; i<lx; i++) {
@@ -283,9 +283,14 @@ SEXP cartogramR (SEXP rcentroidx, SEXP rcentroidy, SEXP rygeomd,
           if (ansy[i*ly + j] >ly) ansy[i*ly + j]=ly;
         }
       }
-      SET_VECTOR_ELT(rans, 5, ransx);
-      SET_VECTOR_ELT(rans, 6, ransy);
+    } else {
+      /* no grid to export, but to simplify Rchk stage */
+      /* allocate dummy  matrix (1,1) */
+      ransx = PROTECT(allocMatrix(REALSXP, 1, 1));
+      ransy = PROTECT(allocMatrix(REALSXP, 1, 1));
     }
+    SET_VECTOR_ELT(rans, 5, ransx);
+    SET_VECTOR_ELT(rans, 6, ransy);
     /*--------------------------------------------------------------
      * export polycorn (ugly global variable) to rygeom an R sf list
      * four  steps
@@ -388,19 +393,14 @@ SEXP cartogramR (SEXP rcentroidx, SEXP rcentroidy, SEXP rygeomd,
     }
     SET_VECTOR_ELT(rans, 2, rfinal_area);
     /*------------------------- end export------------------------*/
-    /*------------------------ Free memory. ----------------------*/
-    UNPROTECT(12);
-    UNPROTECT(3); /* rygeom + rcentroidx2 + rcentroidy2 */
-    FREEG1 ;
     Rprintf("max. rel. area error: %f\n", curcrit);
-    warning("at the init of the program, we are already at the end, exiting...");
+    warning("at the beginning of the program, we are already at the end, exiting...");
   } else {
     /* -------------------------------------------------------- */
     /*  the program starts */
     /* -------------------------------------------------------- */
     /* proj[i*ly+j] will store the current position of the point that started  */
     /* at (i+0.5, j+0.5).                                                      */
-
     projinit = (POINT*) malloc(projsize);
     for (i = 0; i < lx; i++) {
       for (j = 0; j < ly; j++) {
@@ -419,7 +419,7 @@ SEXP cartogramR (SEXP rcentroidx, SEXP rcentroidy, SEXP rygeomd,
       }
 
     /* -------------------------------------------------------- */
-    /* ------- First integration of the equations of motion.*/
+    /* ------- First integration of the equations of motion.    */
     /* -------------------------------------------------------- */
     if (options[0]>0) Rprintf("Starting iteration 1 ");
     if (options[0]>1) Rprintf("\n");
@@ -430,7 +430,8 @@ SEXP cartogramR (SEXP rcentroidx, SEXP rcentroidy, SEXP rygeomd,
     if (errorloc>0) {
       /* ------- free memory on error ------- */
       FREEG1 ;
-      UNPROTECT(12);
+      /*---------- Unprotect. ----------------*/
+      UNPROTECT(16);
       UNPROTECT(3); /* rygeom + rcentroidx2 + rcentroidy2*/
       error("error in ffb_integrate/diff_integrate");
       return rans;
@@ -439,7 +440,8 @@ SEXP cartogramR (SEXP rcentroidx, SEXP rcentroidy, SEXP rygeomd,
     if (errorloc>0) {
       /* ------- free memory on error ------- */
       FREEG1 ;
-      UNPROTECT(12);
+      /*---------- Unprotect. ----------------*/
+      UNPROTECT(16);
       UNPROTECT(3); /* rygeom + rcentroidx2 + rcentroidy2*/
       error("error in project");
       return rans;
@@ -492,7 +494,7 @@ SEXP cartogramR (SEXP rcentroidx, SEXP rcentroidy, SEXP rygeomd,
         /* ------- free memory on error ------- */
         FREEG1;
         free(proj2);
-        UNPROTECT(12);
+        UNPROTECT(16);
         UNPROTECT(3); /* rygeom + rcentroidx2 + rcentroidy2*/
         error("error in ffb_integrate/diff_integrate");
         return rans;
@@ -504,7 +506,7 @@ SEXP cartogramR (SEXP rcentroidx, SEXP rcentroidy, SEXP rygeomd,
         /* ------- free memory on error ------- */
         FREEG1;
         free(proj2);
-        UNPROTECT(12);
+        UNPROTECT(16);
         UNPROTECT(3); /* rygeom + rcentroidx2 + rcentroidy2*/
         error("error in project");
         return rans;
@@ -559,10 +561,11 @@ SEXP cartogramR (SEXP rcentroidx, SEXP rcentroidy, SEXP rygeomd,
     /* -------------------------------------------------------- */
     /* Export the grid if needed */
     /* -------------------------------------------------------- */
+    SEXP ransx, ransy;
     if (gridexport) {
       /* export grid */
-      SEXP ransx = PROTECT(allocMatrix(REALSXP, ly, lx));
-      SEXP ransy = PROTECT(allocMatrix(REALSXP, ly, lx));
+      ransx = PROTECT(allocMatrix(REALSXP, ly, lx));
+      ransy = PROTECT(allocMatrix(REALSXP, ly, lx));
       double *ansx = REAL(ransx);
       double *ansy = REAL(ransy);
       for (i=0; i<lx; i++) {
@@ -577,9 +580,14 @@ SEXP cartogramR (SEXP rcentroidx, SEXP rcentroidy, SEXP rygeomd,
           if (ansy[i*ly + j] >ly) ansy[i*ly + j]=ly;
         }
       }
-      SET_VECTOR_ELT(rans, 5, ransx);
-      SET_VECTOR_ELT(rans, 6, ransy);
+    } else {
+      /* no grid to export, but to simplify Rchk stage */
+      /* allocate dummy  matrix (1,1) */
+      ransx = PROTECT(allocMatrix(REALSXP, 1, 1));
+      ransy = PROTECT(allocMatrix(REALSXP, 1, 1));
     }
+    SET_VECTOR_ELT(rans, 5, ransx);
+    SET_VECTOR_ELT(rans, 6, ransy);
     /* -------------------------------------------------------- */
     /* export cartcorn (ugly global variable) to rygeom an R sf list */
     /* four  steps                                              */
@@ -682,20 +690,17 @@ SEXP cartogramR (SEXP rcentroidx, SEXP rcentroidy, SEXP rygeomd,
         final_area[i] += polygon_area(n_polycorn[polyinreg[i][j]],
                                       cartcorn[polyinreg[i][j]]);
     }
+    
     SET_VECTOR_ELT(rans, 2, rfinal_area);
     /* -------------------------- end export------------------------- */
     /* ------------------------- Free memory. ----------------------- */
-    FREEG1;
     free(proj2);
-    if (gridexport) {
+  }
+    /*------------------- End of main if then else ---------------*/
+    /*------------------------ Free memory. ----------------------*/
+    FREEG1;
+    /*------------------------ Unprotect. ----------------------*/
       UNPROTECT(16);
       UNPROTECT(3); /* rygeom + rcentroidx2 + rcentroidy2 */
-      return rans ;
-    } else {
-      UNPROTECT(14);
-      UNPROTECT(3); /* rygeom + rcentroidx2 + rcentroidy2 */
-      return rans ;
-    }
-  }
   return rans ;
 }

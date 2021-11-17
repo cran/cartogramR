@@ -210,7 +210,6 @@ SEXP geomcarto (SEXP rygeom, SEXP rmultipoly, SEXP rgridx, SEXP rgridy, SEXP rpa
 	      }
 
 	  }
-	  UNPROTECT(1); /* rcoordvert */
 	  UNPROTECT(1); /* rcoordvert2 */
 	  if (errorloc>0)  break;
 	}
