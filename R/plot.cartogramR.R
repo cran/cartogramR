@@ -18,6 +18,6 @@
 plot.cartogramR <- function(x, ...) {
  if  (!inherits(x, "cartogramR")) stop(paste(deparse(substitute(x)), "must be a cartogramR object"))
  x <- x$cartogram
- plot(x)
+ plot(x, ...)
  return(invisible(NULL))
 }

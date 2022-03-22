@@ -1,4 +1,4 @@
-8def73eee5e49fa5daded2a66087ac67 *DESCRIPTION
+3e15d2d37d77d2d4e41613755e355205 *DESCRIPTION
 c684a6b0320d2e965ddd4f3e44bbd493 *LICENSE
 e68741b0e9fe0a777dbcd43326e5e0e0 *NAMESPACE
 2aa075167bebb38474b2ca0d32a91bcd *R/as.sf.R
@@ -14,7 +14,7 @@ ec8039e87d930cfa050ac33c1be0a2f1 *R/from_coord_polygon.R
 22edd81a1cbbe2bf8b2bb48e0ddeaa6d *R/geom_cartogramR.R
 a8b2058174fe50b80d6e60ac510ac477 *R/grid_analysis.R
 30910f37d454dbd69350ab81b2d7cb73 *R/make_layer.R
-e92eadfb094c7346f184e180c86e10fa *R/plot.cartogramR.R
+9d48e7244cf490f8521d1331df3f5874 *R/plot.cartogramR.R
 a277edeae03e1a72857782a9b698a4b2 *R/plot.dbv.cartogramR.R
 75e9865fa93f3b501bd365e7373a79b0 *R/plot.gridanalysis.cartogramR.R
 85a5179b450941a750cd5df531b09c60 *R/precartogramR.R
