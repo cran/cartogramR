@@ -1,4 +1,4 @@
-3e15d2d37d77d2d4e41613755e355205 *DESCRIPTION
+9b22887c17cb2d3c1b6db68215f64db1 *DESCRIPTION
 c684a6b0320d2e965ddd4f3e44bbd493 *LICENSE
 e68741b0e9fe0a777dbcd43326e5e0e0 *NAMESPACE
 2aa075167bebb38474b2ca0d32a91bcd *R/as.sf.R
@@ -7,7 +7,7 @@ a26a39f93ac3db0a1880a2e5fc4fafe1 *R/as.sf.cartogramR.R
 a2426b33c3a46fa4fd7569a3ae83266b *R/as.sfc.cartogramR.R
 f17148dd8ee0621115655e05fa7a9f62 *R/as.sfmultipolygon.R
 9618c999a68f29ef8c0b220a6bf1e875 *R/cartogramR.R
-a7177a6a91e0099e21ee67144bcab0e7 *R/cartogramR_options.R
+357b6d8e0cb0505cbdd50c337b81c49e *R/cartogramR_options.R
 d1d4e77bf81bb19a4c9e54ac68f2c935 *R/check_ring_dir.R
 551cbb6f171d448b971ecea8cfe96112 *R/dist_between_vertices.R
 ec8039e87d930cfa050ac33c1be0a2f1 *R/from_coord_polygon.R
@@ -36,7 +36,7 @@ c5db52f565860fdb28dae33d125f3ef5 *man/as.sfc.Rd
 ec8c7cf19ff0bd71239d9f7766b9d8e1 *man/as.sfc.cartogramR.Rd
 1c5248699d466b6f963f1515aa6abdff *man/as.sfmultipolygon.Rd
 2692687a4e12ac1647d6d9c893c13efc *man/cartogramR.Rd
-b4426c5c0ce8cc21724daf8d74b5f626 *man/cartogramR_options.Rd
+fa43f680eb41cc6075745a75e50e7659 *man/cartogramR_options.Rd
 892f2c1be1d7d35f13a89d68fb8d1c19 *man/check_ring_dir.Rd
 b8b8dd49b776f383758c9cf9fa7b0021 *man/dist_between_vertices.Rd
 1d6496d67a06ffe7c452838522a8ac6b *man/france_dept.Rd

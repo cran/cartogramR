@@ -43,8 +43,8 @@ region (default to 0.2)
 or \code{"point_on_surface"}) or a function. If the
 object is a function, it  will be used to
 calculate the "center" of polygons; \code{"point_on_surface"}
-(the default) will use the function \link[sf:geos_unary]{sf::st_point_on_surface}
-while \code{"centroid"} will use \link[sf:geos_unary]{sf::st_centroid}.
+will use the function \link[sf:geos_unary]{sf::st_point_on_surface}
+while \code{"centroid"} (the default) will use \link[sf:geos_unary]{sf::st_centroid}.
 \item verbose: (all method) integer giving the verbosity level
 (default to \code{0}, not verbose)
 \item grid: (\verb{"gsm" or "gn"}) boolean, if \code{TRUE} export the final

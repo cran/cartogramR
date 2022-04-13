@@ -31,8 +31,8 @@
 #'     or `"point_on_surface"`) or a function. If the
 #'    object is a function, it  will be used to
 #'    calculate the "center" of polygons; `"point_on_surface"`
-#'      (the default) will use the function [sf::st_point_on_surface]
-#'      while `"centroid"` will use [sf::st_centroid].
+#'      will use the function [sf::st_point_on_surface]
+#'      while `"centroid"` (the default) will use [sf::st_centroid].
 #' - verbose: (all method) integer giving the verbosity level
 #'           (default to `0`, not verbose)
 #' - grid: (`"gsm" or "gn"`) boolean, if `TRUE` export the final
@@ -82,17 +82,17 @@ cartogramR_options <- function(options,
                "abserror"=1e4, "abstol"=1e3, absrel=TRUE, "L"=512L,
                "mp" = 0.2, "pf"=1.5 , "sigma"= 5, "verbose"=0,
                "grid"=TRUE, check.ring.dir=TRUE, check.only=FALSE,
-               center="point_on_surface")
+               center="centroid")
   select <- names(options) %in% names(resd)
-  if ((!is.character(resd$center))&&(!is.function(resd$center))) stop("the center component must be either a character or a function that aims to calculate a center for each multipolygon")
-  if (is.character(resd$center)) {
-    prov <- match.arg(resd$center,c("centroids","point_on_surface"))
-    if (prov=="centroids")
-      resd$center <- sf::st_point_on_surface else
-                                               resd$center <- sf::st_centroid
-  }
   if (!all(select)) stop(paste("the following name(s)",names(options)[!select],"does/do not match the options name"))
   resd[names(options)] <- options
+  if ((!is.character(resd$center))&&(!is.function(resd$center))) stop("the center component must be either a character or a function that aims to calculate a center for each multipolygon")
+  if (is.character(resd$center)) {
+    prov <- match.arg(resd$center,c("centroid","point_on_surface"))
+    if (prov=="centroid")
+      resd$center <- sf::st_centroid else
+                                               resd$center <- sf::st_point_on_surface
+  }
   if (all(unlist(lapply(resd[c("maxit","relerror","reltol","abserror","abstol","L", "mp", "pf", "sigma", "verbose")],is.numeric)))) {
     if (resd$maxit<=1) stop("at least 2 iterations")
     if (resd$abserror<=0) stop("absolute error must be strictly positive")
