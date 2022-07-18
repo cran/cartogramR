@@ -5,7 +5,7 @@
 #'   arguments are available:
 #'     - type; a character string giving the type of residuals (see details)
 #'       - "relative error"
-#'       - "error"
+#'       - "absolute error"
 #'       - "symmetric difference"
 #'     - center ; a character string giving the type of center:
 #'       - "point_on_surface" ([st_point_on_surface] applied on original
@@ -47,8 +47,8 @@ residuals.cartogramR <- function(object, ...) {
   argsup <- eval(substitute(alist(...)))
   req_options <- names(argsup)
   default_options[req_options] <- argsup
-  type <- match.arg(default_options$type, choices=c("relative error", "error", "symmetric difference"))
-  if (type=="error") {
+  type <- match.arg(default_options$type, choices=c("relative error", "absolute error", "symmetric difference"))
+  if (type=="absolute error") {
     r <- object$final_area - object$target_area
     return(r)
   }

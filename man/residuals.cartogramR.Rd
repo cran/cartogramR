@@ -13,7 +13,7 @@
 arguments are available:
 - type; a character string giving the type of residuals (see details)
 - "relative error"
-- "error"
+- "absolute error"
 - "symmetric difference"
 - center ; a character string giving the type of center:
 - "point_on_surface" (\link{st_point_on_surface} applied on original
@@ -37,13 +37,15 @@ Errors of a cartogram object
 The error vector contains the values of the differences
 between actual area of regions in the cartogram and theorical area
 (obtained with conservation of total area and constant density over
-region in the final cartogram)\preformatted{Relative error are the error vector divided by the theorical area
+region in the final cartogram)
+
+\if{html}{\out{<div class="sourceCode">}}\preformatted{Relative error are the error vector divided by the theorical area
 
 Symmetric difference are the symmetric difference between
 actual area of regions in the cartogram and the original
 area. Each region is scaled to have an area equal to 1 and centered
 around the chosen center.
-}
+}\if{html}{\out{</div>}}
 }
 \examples{
 \donttest{

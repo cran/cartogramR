@@ -1,4 +1,4 @@
-9b22887c17cb2d3c1b6db68215f64db1 *DESCRIPTION
+d52df6a7b6e4449225480ef7bb53bc3d *DESCRIPTION
 c684a6b0320d2e965ddd4f3e44bbd493 *LICENSE
 e68741b0e9fe0a777dbcd43326e5e0e0 *NAMESPACE
 2aa075167bebb38474b2ca0d32a91bcd *R/as.sf.R
@@ -18,10 +18,10 @@ a8b2058174fe50b80d6e60ac510ac477 *R/grid_analysis.R
 a277edeae03e1a72857782a9b698a4b2 *R/plot.dbv.cartogramR.R
 75e9865fa93f3b501bd365e7373a79b0 *R/plot.gridanalysis.cartogramR.R
 85a5179b450941a750cd5df531b09c60 *R/precartogramR.R
-80aef53a265ccf662ed9dbcd87dbed37 *R/print.cartogramR.R
-3534845eb8df7fa1e35e8a625c94cb82 *R/print.summary.cartogramR.R
-e82abb1af497ff5001ce28bcd282db10 *R/residuals.cartogramR.R
-2ed26ecb32d8e6c2ae455fa6ec2808f1 *R/summary.cartogramR.R
+b79264cf01f071ef43278c0871072b04 *R/print.cartogramR.R
+73f4a3e16f4d4e5fab19bd640c635e90 *R/print.summary.cartogramR.R
+3811e148479a858ac4510b831d6309a9 *R/residuals.cartogramR.R
+11f74948851b07e542b5e10fd29e2897 *R/summary.cartogramR.R
 5646e9363cade99697466e35db57f78a *R/summary.dbv.cartogramR.R
 98be277cea6fdfefadeb72b0b04833ae *R/summary.gridanalysis.cartogramR.R
 064edd4c81b001fa360a4bb07e6c0d93 *R/to_coord_polygon.R
@@ -51,7 +51,7 @@ c6d34611e4232dc5f8ce3597ac6c7d1e *man/plot.gridanalysis.cartogramR.Rd
 1341aa50d01b16b8fc3c9869c387599d *man/precartogramR.Rd
 a8c8a97f13ba58e519a3ee3290361df8 *man/print.cartogramR.Rd
 97f4ba701fd31c8b5511247498c9a537 *man/print.summary.cartogramR.Rd
-fbab105352cfb2e7c0f91c995ab77109 *man/residuals.cartogramR.Rd
+b0b9f903baf5b4f98b31c22b39d5fa4a *man/residuals.cartogramR.Rd
 636190cd3116b1cad8609f47a7514a19 *man/summary.cartogramR.Rd
 28c09c7e8972bebbf4c9a6b1337180e4 *man/summary.dbv.cartogramR.Rd
 e20738b8ddf47e4b06ac6b192d35b214 *man/summary.gridanalysis.cartogramR.Rd
@@ -64,7 +64,7 @@ ef50146e81ccde4e64ef5d2d0c56ae08 *src/caracmap.h
 68f87495c41e2379ad2ab8799c50e739 *src/cartogram.c
 9c07af9f0657ab890227296b7ead35a9 *src/cartogram.h
 e6c8d8a1dc85fcbb3dec19530e021b9f *src/cartogramR.c
-1a9848e71d092afadaac4628be9d80e7 *src/checkring.c
+334f4856af58c73c8972237ee5c4e3f5 *src/checkring.c
 f514bbb57d9402b7e1e27bb864602180 *src/checkring.h
 6d0d437b314b5ea0e625a35ddf1fbdbc *src/dcn.c
 7dc05b626726d8faa7387905daba767f *src/dcn.h

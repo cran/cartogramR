@@ -36,7 +36,7 @@ summary.cartogramR <- function(object, ...) {
   qrr <- c(qrr[1L:3L], mean(abs(rr)), qrr[4L:5L])
   if(!is.null(default_options$digits)) qrr <- signif(qrr, default_options$digits)
   names(qrr) <- c("Min.", "1st Qu.", "Median", "Mean", "3rd Qu.", "Max.")
-  res <- residuals.cartogramR(object, type="error")
+  res <- residuals.cartogramR(object, type="absolute error")
   qres <- stats::quantile(abs(res), names = FALSE, type = default_options$quantile.type)
   qres <- c(qres[1L:3L], mean(abs(res)), qres[4L:5L])
   if(!is.null(default_options$digits))  qres <- signif(qres, default_options$digits)

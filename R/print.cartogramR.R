@@ -17,7 +17,7 @@ print.cartogramR <- function(x, ...) {
       crit <- max(abs(residuals.cartogramR(x, type="relative error")))
       } else {
       critname <- "Max of (Abs) Absolute Errors: "
-      crit <- max(abs(residuals.cartogramR(x, type="error")))
+      crit <- max(abs(residuals.cartogramR(x, type="absolute error")))
       }
   cat(paste0("  ", critname, crit, "\n"))
   return(invisible(NULL))

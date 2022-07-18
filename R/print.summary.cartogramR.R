@@ -31,7 +31,7 @@ print.summary.cartogramR <- function(x, ...) {
     } else {
        print(x$qrr, digits = default_options$digits)
     }
-    cat("  - Error:\n")
+    cat("  - Absolute error:\n")
     if (!all(select)) {
        ll <- c(list(x=x$qres), default_options, req_options[!select])
        do.call(print, ll)

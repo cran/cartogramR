@@ -14,7 +14,7 @@
 
 
 /** \fn checkring
- *  \brief Checks  if polygons are counter clockwise or not and and
+ *  \brief Checks  if polygons are counter clockwise or not and
  *         corrects if asked
  *
  * \param  rygeom  The R list of polygons (each component i is either a
