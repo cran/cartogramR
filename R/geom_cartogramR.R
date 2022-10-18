@@ -77,14 +77,9 @@ geom_cartogramR <- function(sfgeom, carto, verbose=FALSE) {
   multipolygons[mp] <- 5L
   if (any(is.na(multipolygons))) stop("one or more components are not in
        POINT, MULTIPOINT, LINESTRING, MULTILINESTRING, POLYGON, MULTIPOLYGON")
-  attributs <- attributes(sfgeomb)
   results <- .Call(carto_geomcarto,
                    sfgeomb, multipolygons, carto$gridx, carto$gridy,
                    padding, LL, bbox[c(1,3,2,4)], as.integer(verbose))
-  bbox <- attr(results,"bbox")
-  names(bbox) <- nombb
-  attributes(results) <- attributs
-  attr(results,"bbox") <- bbox
   if (sfobject) {
     res <- sf::st_set_geometry(sfgeom, results)
   } else {

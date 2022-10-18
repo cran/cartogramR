@@ -1,4 +1,4 @@
-d52df6a7b6e4449225480ef7bb53bc3d *DESCRIPTION
+684959b4fdb71342ddd3a0e2d0f28656 *DESCRIPTION
 c684a6b0320d2e965ddd4f3e44bbd493 *LICENSE
 e68741b0e9fe0a777dbcd43326e5e0e0 *NAMESPACE
 2aa075167bebb38474b2ca0d32a91bcd *R/as.sf.R
@@ -11,7 +11,7 @@ f17148dd8ee0621115655e05fa7a9f62 *R/as.sfmultipolygon.R
 d1d4e77bf81bb19a4c9e54ac68f2c935 *R/check_ring_dir.R
 551cbb6f171d448b971ecea8cfe96112 *R/dist_between_vertices.R
 ec8039e87d930cfa050ac33c1be0a2f1 *R/from_coord_polygon.R
-22edd81a1cbbe2bf8b2bb48e0ddeaa6d *R/geom_cartogramR.R
+887fcb98a3ed48637d85d1c971fe9314 *R/geom_cartogramR.R
 a8b2058174fe50b80d6e60ac510ac477 *R/grid_analysis.R
 30910f37d454dbd69350ab81b2d7cb73 *R/make_layer.R
 9d48e7244cf490f8521d1331df3f5874 *R/plot.cartogramR.R
@@ -71,7 +71,7 @@ f514bbb57d9402b7e1e27bb864602180 *src/checkring.h
 5896b6219ecbbc096f27e18019758157 *src/diff_integrate.c
 c499857a96ce706542a3bdc34e479b42 *src/ffb_integrate.c
 1636c82c7d0959ff816c8c0a94565f6a *src/fill_with_density.c
-2c4abfd73b083253b5831c039f115b67 *src/geomcarto.c
+6a5d535334ee4347d8057f44e79ad7c0 *src/geomcarto.c
 9adb4d51e4f199d61f7deb47941ea7c6 *src/geomcarto.h
 f150db1cde92bba1a804730327d116d6 *src/gridanalysis.c
 802ebc8dd650cd6fd86453a0da5c7678 *src/gridanalysis.h

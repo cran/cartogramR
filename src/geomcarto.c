@@ -35,26 +35,24 @@
  *         must be a power of two (for fftw)
  * \param  rbbox: SEXP, the bounding box in cartogram
  * \param  roptions Integer vector of options
- * \return rygeom2 : SEXP, The R list of simple geometry
+ * \return rygeom : SEXP, The R list of simple geometry
  *******************************************************************/
 
-SEXP geomcarto (SEXP rygeom, SEXP rmultipoly, SEXP rgridx, SEXP rgridy, SEXP rpadding,
-		 SEXP rLL, SEXP rbbox, SEXP roptions)
+SEXP geomcarto (SEXP rygeomd, SEXP rmultipoly, SEXP rgridx, SEXP rgridy,
+                SEXP rpadding, SEXP rLL, SEXP rbboxd, SEXP roptions)
 {
   /*****************************************************************************/
   /* input and output from/to R */
   /*****************************************************************************/
   /* list output is an R object */
-  SEXP  rygeom2;
+  SEXP rygeom = PROTECT(duplicate(rygeomd));
+  SEXP rbbox=PROTECT(duplicate(rbboxd)), rnamesbbox, rclassbbox;
   /*****************************************************************************/
   /* processing input  from R */
   /*****************************************************************************/
-  /* list */
-  rygeom = PROTECT(coerceVector(rygeom, VECSXP));
   /* double */
   rgridx = PROTECT(coerceVector(rgridx, REALSXP));
   rgridy = PROTECT(coerceVector(rgridy, REALSXP));
-  rbbox = PROTECT(coerceVector(rbbox, REALSXP));
   rpadding = PROTECT(coerceVector(rpadding, REALSXP));
   double *gridx, *gridy, *bbox, padding;
   gridx = REAL(rgridx);
@@ -115,9 +113,7 @@ SEXP geomcarto (SEXP rygeom, SEXP rmultipoly, SEXP rgridx, SEXP rgridy, SEXP rpa
     }
   }
   /************************************************************************/
-  /* Result: rygeom2  */
-  /************************************************************************/
-  rygeom2 = PROTECT(duplicate(rygeom));
+  /* Result: rygeom  */
   /************************************************************************/
   /* Read polygon from R list to n_polycorn (and assign memory)*/
   /************************************************************************/
@@ -127,7 +123,7 @@ SEXP geomcarto (SEXP rygeom, SEXP rmultipoly, SEXP rgridx, SEXP rgridy, SEXP rpa
   double *coordvert2, coordx, coordy, coordxx, coordyy, minx=0.0, miny=0.0, maxx=0.0, maxy=0.0;
   iter=0;
   for (i=0; i<n_rows; i++) {
-    rlistcoord2 = PROTECT(VECTOR_ELT(rygeom2, i));
+    rlistcoord2 = PROTECT(VECTOR_ELT(rygeom, i));
     nbinpoly = length(rlistcoord2);
     if (multipoly[i] < 3) {
       /* R vector of "points" (x1, x2, ..., xnbpts, y1, y2, ..., ynbpts) */
@@ -157,12 +153,12 @@ SEXP geomcarto (SEXP rygeom, SEXP rmultipoly, SEXP rgridx, SEXP rgridy, SEXP rpa
 	  miny=coordy;
 	  maxx=coordx;
 	  maxy=coordy;
+	  iter=1;
 	} else {
 	  minx=fmin2(minx, coordx);
 	  miny=fmin2(miny, coordy);
 	  maxx=fmax2(maxx, coordx);
 	  maxy=fmax2(maxy, coordy);
-	  iter=1;
 	}
       }
     } else {
@@ -201,12 +197,12 @@ SEXP geomcarto (SEXP rygeom, SEXP rmultipoly, SEXP rgridx, SEXP rgridy, SEXP rpa
 		miny=coordy;
 		maxx=coordx;
 		maxy=coordy;
+		iter=1;
 	      } else {
 		minx=fmin2(minx, coordx);
 		miny=fmin2(miny, coordy);
 		maxx=fmax2(maxx, coordx);
 		maxy=fmax2(maxy, coordy);
-		iter=1;
 	      }
 
 	  }
@@ -257,12 +253,12 @@ SEXP geomcarto (SEXP rygeom, SEXP rmultipoly, SEXP rgridx, SEXP rgridy, SEXP rpa
 		miny=coordy;
 		maxx=coordx;
 		maxy=coordy;
+		iter=1;
 	      } else {
 		minx=fmin2(minx, coordx);
 		miny=fmin2(miny, coordy);
 		maxx=fmax2(maxx, coordx);
 		maxy=fmax2(maxy, coordy);
-		iter=1;
 	      }
 	    }
 	    UNPROTECT(1); /* rcoordvert2 */
@@ -273,7 +269,7 @@ SEXP geomcarto (SEXP rygeom, SEXP rmultipoly, SEXP rgridx, SEXP rgridy, SEXP rpa
 	}
       }
     }
-    /*SET_VECTOR_ELT(rygeom2, i, rlistcoord2);*/
+    /*SET_VECTOR_ELT(rygeom, i, rlistcoord2);*/
     UNPROTECT(1); /* rlistcoord2 */
     if (errorloc>0)  break;
   }
@@ -281,10 +277,24 @@ SEXP geomcarto (SEXP rygeom, SEXP rmultipoly, SEXP rgridx, SEXP rgridy, SEXP rpa
   bbox[1]=miny;
   bbox[2]=maxx;
   bbox[3]=maxy;
-  setAttrib(rygeom2, install("bbox"), rbbox);
-  UNPROTECT(9); /* rygeom + rgridx + rgridy + rygeom2 + rmultipoly +
-                  rpadding + rLL + rbbox + roptions*/
+  /* nases of components of the vector rbbox */
+  rnamesbbox = PROTECT(allocVector(STRSXP, 4));
+  SET_STRING_ELT(rnamesbbox, 0, mkChar("xmin"));
+  SET_STRING_ELT(rnamesbbox, 1, mkChar("ymin"));
+  SET_STRING_ELT(rnamesbbox, 2, mkChar("xmax"));
+  SET_STRING_ELT(rnamesbbox, 3, mkChar("ymax"));
+  /* assign names to vector rbbox */
+  setAttrib(rbbox, R_NamesSymbol, rnamesbbox);
+  /* class bbox */
+  rclassbbox = PROTECT(allocVector(STRSXP, 1));
+  SET_STRING_ELT(rclassbbox, 0, mkChar("bbox"));
+  classgets(rbbox, rclassbbox);
+  /* set bbox attribute to rygeom */
+  setAttrib(rygeom, install("bbox"), rbbox);
+  UNPROTECT(10); /* rygeom + rbbox + rgridx + rgridy + rpadding + rLL
+                  + roptions + rmultipoly + rnamesbbox +
+                  rclassbbox*/
   if (errorloc>0)  error("interpolation error");
-  return rygeom2;
+  return rygeom;
 }
 

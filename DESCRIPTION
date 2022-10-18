@@ -1,6 +1,6 @@
 Package: cartogramR
-Version: 1.0-8
-Date: 2022-07-18
+Version: 1.0-9
+Date: 2022-10-18
 Title: Continuous Cartogram
 Authors@R: c(person(given = "Pierre-Andre",
                    family = "Cornillon",
@@ -28,11 +28,11 @@ License: MIT + file LICENSE
 RoxygenNote: 7.2.0
 Encoding: UTF-8
 NeedsCompilation: yes
-Packaged: 2022-07-18 12:34:06 UTC; pac
+Packaged: 2022-10-18 16:15:54 UTC; pac
 Author: Pierre-Andre Cornillon [aut, cre],
   Florent Demoraes [aut],
   Flow-Based-Cartograms [cph] (Author of core C code for gsm and gn
     procedures)
 Maintainer: Pierre-Andre Cornillon <pierre-andre.cornillon@univ-rennes2.fr>
 Repository: CRAN
-Date/Publication: 2022-07-18 13:10:10 UTC
+Date/Publication: 2022-10-18 16:55:07 UTC
