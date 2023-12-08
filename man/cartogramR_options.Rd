@@ -16,21 +16,36 @@ cartogramR_options(
 \item maxit:  (all method) the maximum number of iterations,
 default to 50.
 \item absrel:  (all method)  boolean, if \code{TRUE} relative convergence
-if \code{FALSE} absolute convergence (default to \code{TRUE})
+stopping criterion is used ; if \code{FALSE} absolute convergence
+stopping criterion is used
+(default to \code{TRUE})
 \item abserror: (all method) Areas on cartogram differ at most by an
-(absolute value of) error of abserror. That is,
-max_{polygons} |area_on_cartogram - target_area| <= abserror
+(absolute value of) error of \code{abserror}. That is,
+\eqn{\max_{p} |\hat A_p - A_p|
+  \leq  abserror}{max_{p} | Ahat_p - A_p | <= abserror}.
+The max is over all polygons \eqn{p}{p}, \eqn{hat A_p}{Ahat_p}
+is the area calculated by the cartogram for polygon \eqn{p}{p}
+and  \eqn{A_p}{A_p} is the objective area,
 (default to 10000)
 \item abstol:  (\code{"dcn"}) the absolute convergence error tolerance:
-max_{polygons} |area(i) - area(i-1)|
-default to 1000
+\eqn{\max_{p} | \hat A_p(i) -
+  \hat A_p(i-1)| \leq abstol}{max_{p} |Ahat_p(i) - Ahat_p(i-1)| <= abstol},
+the max over all polygons \eqn{p}{p} of the difference of area
+calculated by the cartogram at
+step \eqn{i}{i} and those at step \eqn{i-1}{i-1},
+(default to 1000)
 \item relerror: (all method) Areas on cartogram differ at most by an
-(absolute value of) relative error of relerror. That is,
-max_{polygons} |area_on_cartogram / target_area - 1| <= relerror
+(absolute value of) relative error of \code{relerror}. That is,
+\eqn{\max_{p} |\hat A_p / A_p - 1|
+  \leq  relerror}{max_{p} | Ahat_p /A_p - 1| <= relerror}.
+The max is over all polygons \eqn{p}{p}, \eqn{hat A_p}{Ahat_p} is
+the area calculated by the cartogram for polygon \eqn{p}{p} and
+\eqn{A_p}{A_p} is the objective area,
 (default to 0.01)
-\item reltol:  (\code{"dcn"}) the absolute convergence tolerance:
-max_{polygons} abs((area(i) - area(i-1))/area(i-1)
-default to 1e-3
+\item reltol:  (\code{"dcn"}) the relative convergence tolerance:
+\eqn{\max_{p} |\hat A_p(i) - \hat A_p(i-1)|/\hat A_p(i-1)
+  \leq reltol}{max_{p} |Ahat_p(i) - Ahat_p(i-1)|/Ahat_p(i-1) <= reltol}
+(default to 1e-3)
 \item L: (\verb{"gsm" or "gn"}) integer, gives the value of \code{L} (default
 is 512), must be a power of two (for fftw)
 \item mp: (all method) if a region contains exactly zero population, it will be

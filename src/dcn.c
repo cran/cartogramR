@@ -201,10 +201,8 @@ SEXP dcn (SEXP rygeomd, SEXP rx, SEXP ry, SEXP rcount,
   meansizeError /= nmp;
   /* forcereduction factor */
   forceReductionFactor = 1/(1+  meansizeError);
-  /* 1/(1+ 1 * meansizeError); */
-  /* if (verbose==1) Rprintf("forceReductionFactor %.6f\n", forceReductionFactor); */
 /* verbose ? */
-  if (verbose>1) Rprintf("Initial state\n",meansizeError);
+  if (verbose>1) Rprintf("Initial state\n");
   if (verbose>1) Rprintf(" * Max of abs or relative error %.6f\n", maxrelError);
   if (verbose>1) Rprintf(" * Mean size error %.6f\n", meansizeError);
   if (verbose==1) Rprintf("1 * MaxErr %.6f\n", maxrelError);

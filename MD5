@@ -1,4 +1,4 @@
-684959b4fdb71342ddd3a0e2d0f28656 *DESCRIPTION
+4412da2a329506933b40c08c106bf8f5 *DESCRIPTION
 c684a6b0320d2e965ddd4f3e44bbd493 *LICENSE
 e68741b0e9fe0a777dbcd43326e5e0e0 *NAMESPACE
 2aa075167bebb38474b2ca0d32a91bcd *R/as.sf.R
@@ -36,17 +36,17 @@ c5db52f565860fdb28dae33d125f3ef5 *man/as.sfc.Rd
 ec8c7cf19ff0bd71239d9f7766b9d8e1 *man/as.sfc.cartogramR.Rd
 1c5248699d466b6f963f1515aa6abdff *man/as.sfmultipolygon.Rd
 2692687a4e12ac1647d6d9c893c13efc *man/cartogramR.Rd
-fa43f680eb41cc6075745a75e50e7659 *man/cartogramR_options.Rd
+bae87d778c8e2c24b110c52c051b9d49 *man/cartogramR_options.Rd
 892f2c1be1d7d35f13a89d68fb8d1c19 *man/check_ring_dir.Rd
 b8b8dd49b776f383758c9cf9fa7b0021 *man/dist_between_vertices.Rd
 1d6496d67a06ffe7c452838522a8ac6b *man/france_dept.Rd
 c52cedcba0d5af2879cee3c59d56d7d8 *man/france_rivers.Rd
 a655ffc830b1559d3b6e7ca83f2d7d9a *man/from_coord_polygon.Rd
 bce4debf18092e9c74045b47cb0f1d1c *man/geom_cartogramR.Rd
-a314a2a3cfaecc68c2b3ab5f814b16ee *man/grid_analysis.Rd
+500b65ca8ddc759c76e7fcb8a617ce53 *man/grid_analysis.Rd
 524ea3a2e1d99392d1ce01ead148bf29 *man/make_layer.Rd
 255d73bcfa8904edee40545c2ac2b21b *man/plot.cartogramR.Rd
-d921828a8f73e45befb6dc7a1a308696 *man/plot.dbv.cartogramR.Rd
+07337062e46de1fc09367f9a70ce9b74 *man/plot.dbv.cartogramR.Rd
 c6d34611e4232dc5f8ce3597ac6c7d1e *man/plot.gridanalysis.cartogramR.Rd
 1341aa50d01b16b8fc3c9869c387599d *man/precartogramR.Rd
 a8c8a97f13ba58e519a3ee3290361df8 *man/print.cartogramR.Rd
@@ -54,7 +54,7 @@ a8c8a97f13ba58e519a3ee3290361df8 *man/print.cartogramR.Rd
 b0b9f903baf5b4f98b31c22b39d5fa4a *man/residuals.cartogramR.Rd
 636190cd3116b1cad8609f47a7514a19 *man/summary.cartogramR.Rd
 28c09c7e8972bebbf4c9a6b1337180e4 *man/summary.dbv.cartogramR.Rd
-e20738b8ddf47e4b06ac6b192d35b214 *man/summary.gridanalysis.cartogramR.Rd
+15d7233e9717d3cb5c5d1ae985bdc32e *man/summary.gridanalysis.cartogramR.Rd
 4a18a6681ee6e0f522f422cbbc0b2aaa *man/to_coord_polygon.Rd
 48332cc071e80a233540572228830d32 *man/usa.Rd
 bf01107cd2740d42dbb6a6b889297aaa *src/Makevars
@@ -66,7 +66,7 @@ ef50146e81ccde4e64ef5d2d0c56ae08 *src/caracmap.h
 e6c8d8a1dc85fcbb3dec19530e021b9f *src/cartogramR.c
 334f4856af58c73c8972237ee5c4e3f5 *src/checkring.c
 f514bbb57d9402b7e1e27bb864602180 *src/checkring.h
-6d0d437b314b5ea0e625a35ddf1fbdbc *src/dcn.c
+00d929570a0aa41177d0d4017ab550ec *src/dcn.c
 7dc05b626726d8faa7387905daba767f *src/dcn.h
 5896b6219ecbbc096f27e18019758157 *src/diff_integrate.c
 c499857a96ce706542a3bdc34e479b42 *src/ffb_integrate.c
@@ -87,9 +87,3 @@ eba4d747f0dd93f151a26d52864b2ba1 *src/invcarto.h
 4b0acf7b0a10418064b0fa8265019875 *src/makegraticule.h
 e60bb35315fd98073cd21f1614690f55 *src/read_gen.c
 6c95320a63fb38761252241a6e37da3b *src/typepoint.h
-8173f0c86120634067fd00c0aeb544c3 *tests/dcn.R
-e7fac1c24d694e1a4f276a580af6ee3b *tests/dcn.Rout
-4461bdd02e43864f4b305cedecb845a9 *tests/gn.R
-dd62fd55f56e9e9a4c75ac9dcf7729c4 *tests/gn.Rout
-7d38b4ceca3384199ccd94659da1a876 *tests/gsm.R
-85d27a698a06f2740489f1ba6077277c *tests/gsm.Rout
