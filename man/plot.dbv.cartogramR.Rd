@@ -39,9 +39,8 @@ are shown. The second plot is a barplot by region of the
 number of vertice divided by the perimeter of the region
 }
 \examples{
-\donttest{
   data(usa)
   precarto <- precartogramR(usa, method="dcn")
   plot(precarto)
-}
+
 }

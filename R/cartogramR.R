@@ -20,23 +20,20 @@
 #' @param options a named list given to [cartogramR_options] function
 #'     which process options see [cartogramR_options] for
 #'     details. Default to `NULL`.
-#' @return A list with the following components:
+#' @return A cartogramR object: a list with the following components:
 #' - cartogram: a sf object (in the same order of `data` or sorted by `idregion`
-#'    see reordered argument) which contains the cartogram
-#'    (ie the initial polygons after deformation)
-#' - orig_area: original areas of regions
-#' - final_area: final areas of regions in the cartogram
-#' - orig_centers: the initial centers calculated with [st_point_on_surface]
+#'    see reordered argument) which contains the initial data
+#'    (without the geometry) with  three additionnal columns (orig_area: original
+#'     areas of regions, final_area: final areas of regions in the cartogram
+#'     and target_areas the targeted area) and a geometry part which is
+#'     the cartogram (ie the initial polygons after deformation)
+#' - orig_centers: the initial centers calculated with [sf::st_point_on_surface]
 #' - final_centers: the centers after deformation
 #' - gridx: (for flow-based method) final grid (x-axis) if requested
 #'         (see [cartogramR_options] for details).
 #' - gridy: (for flow-based method) final grid (y-axis) if requested
 #'         (see [cartogramR_options] for details).
-#' - count: the count by region
-#' - target_area: target areas of regions
-#' - initial_data: the initial sf object
-#' - details: names of original data, idcount variable, algorithm
-#' - options: values of options
+#' with additionnal attributes.
 #'
 #' @export
 #' @import data.table
@@ -161,16 +158,29 @@ if (method=="dcn") {
         names(results) <- c("cartogram","orig_area","final_area","orig_centers","final_centers")
         }
     }
-    results$final_centers <- matrix(c(results$orig_centers, results$final_centers), ncol=2)
-    results$orig_centers <- matrix(centers, ncol=2, byrow=TRUE)
-    results$count <- trimCountVar
-    results$target_area <- trimCountVar/sum(trimCountVar)*sum(results$orig_area)
-    results$initial_data <- data
-    algo <- switch(method,"gsm"= "Gastner, Seguy & More (2018) fast flow-based algorithm", "gn"="Gastner & Newman (2004) diffusion algorithm", "dcn" = "Dougenik, Chrisman &  Niemeyer (1985) rubber band algorithm")
-    results$details <- c(initial_data_name=deparse(substitute(data)),
-                         initial_count_name=count,
-                         method=method,algorithm=algo)
-    results$options <- currentoptions
+    ## make an sf object of results$cartogram
+    namevarall <- names(data)
+    namegeom <- attr(data, "sf_column")
+    namesvar <- namevarall[namevarall!=namegeom]
+    dataonly <- data.frame(data)[,namesvar]
+    target_area <- trimCountVar/sum(trimCountVar)*sum(results$orig_area)
+    y <- cbind.data.frame(dataonly, results$orig_area, results$final_area, target_area)
+    names(y)[(ncol(y)-2):ncol(y)] <- c("orig_area", "final_area", "target_area")
+    y <- sf::st_as_sf(cbind.data.frame(y,  geometry=results$cartogram))
+    results$cartogram <- y
+    ## add centers as sf points
+    y <- st_multipoint(
+      matrix(c(results$orig_centers, results$final_centers), ncol=2), dim = "XY")
+    results$final_centers <- sf::st_sfc(y, crs = sf::st_crs(data))
+    y <- st_multipoint(matrix(centers, ncol=2, byrow=TRUE), dim = "XY")
+    results$orig_centers <- sf::st_sfc(y, crs = sf::st_crs(data))
+    algo <- switch(method, "gsm"= "Gastner, Seguy & More (2018) fast flow-based algorithm", "gn"="Gastner & Newman (2004) diffusion algorithm", "dcn" = "Dougenik, Chrisman &  Niemeyer (1985) rubber band algorithm")
+    attr(results, "initial_data_name") <- deparse(substitute(data))
+    attr(results, "initial_count_name") <- count
+    attr(results, "method") <- method
+    attr(results, "algorithm") <- algo
+    attr(results, "initial_bbox") <- sf::st_bbox(data)
+    attr(results, "options") <- currentoptions
     class(results) <- c("cartogramR", "list")
     return(results)
  }

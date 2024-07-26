@@ -9,11 +9,14 @@
 #'       changed to only round in the `print` and `format` methods).
 #'     - quantile.type integer code used in `quantile(*, type=quantile.type)`.
 #'     - center character string code used in [residuals.cartogramR].
+#'     - initial_data; the initial sf object given as input of cartogramR.
+#'       Only needed for symmetric differences residuals.
 #' @return A summary.cartogramR object: a list with the following components:
 #'  - qrr, the summary of absolute relative residuals
 #'  - qres, the summary of absolute residuals
 #'  - qsymdiff, the summary of all pairwise symmetric difference beween two
-#'    scaled (multi)polygons representative of two regions.
+#'    scaled (multi)polygons representative of two regions. These residuals
+#'    are calculated only if `initial_data` argument is provided.
 #'
 #' @rdname summary.cartogramR
 #' @export
@@ -41,10 +44,15 @@ summary.cartogramR <- function(object, ...) {
   qres <- c(qres[1L:3L], mean(abs(res)), qres[4L:5L])
   if(!is.null(default_options$digits))  qres <- signif(qres, default_options$digits)
   names(qres) <- c("Min.", "1st Qu.", "Median", "Mean", "3rd Qu.", "Max.")
+  initial_data <- eval(parse(text=attr(object,"initial_data_name")),
+                             envir = parent.frame())
+  if (!inherits(initial_data, "sf")) stop(parse("Initial data object",
+                                                attr(object,"initial_data_name"),
+                                          "not found in parent frame"))
   if (default_options$center!="best") {
     delta <- residuals.cartogramR(object, type="symmetric difference", center=default_options$center)
   } else {
-    if (object$details["method"]%in%c("gsm", "gn"))    {
+    if (attr(object, "method")%in%c("gsm", "gn"))    {
       Delta <- matrix(0,nrow=length(res),3)
       Delta[,3] <- residuals.cartogramR(object, type="symmetric difference", center="deformed_center")
     } else {

@@ -23,9 +23,7 @@ a `gridanalysis.cartogramR` object which is a matrix
 Analyse some of the grid options
 }
 \examples{
-\donttest{
   data(usa)
   ga <- grid_analysis(data=usa, gridpower2=4:8, verbose=TRUE)
   summary(ga)
-}
 }

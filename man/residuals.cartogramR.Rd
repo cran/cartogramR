@@ -11,12 +11,13 @@
 
 \item{\\dots}{arguments passed to or from other methods. The following
 arguments are available:
-- type; a character string giving the type of residuals (see details)
+- type; a character string giving the type of residuals (see details;
+can be abbreviated)
 - "relative error"
 - "absolute error"
 - "symmetric difference"
-- center ; a character string giving the type of center:
-- "point_on_surface" (\link{st_point_on_surface} applied on original
+- center; a character string giving the type of center (can be abbreviated):
+- "point_on_surface" (\link[sf:geos_unary]{sf::st_point_on_surface} applied on original
 and on deformed/cartogram region).
 - "deformed_center" (the center function, see
 \link{cartogramR_options}, is applied on region and
@@ -24,7 +25,8 @@ this center follows the deformation  giving
 the center on the deformed/cartogram region)
 - "centroid" (centroid of original and
 deformed/cartogram region).
-Can be abbreviated.}
+- initial_data; the initial sf object given as input of cartogramR.
+Only needed for symmetric differences residuals.}
 }
 \value{
 A numeric vector which contains for each region observed

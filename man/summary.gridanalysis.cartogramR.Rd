@@ -19,9 +19,8 @@ grid points in each polygon
 Summary of a gridanalysis.cartogram object
 }
 \examples{
-\donttest{
   data(usa)
   ga <- grid_analysis(data=usa, gridpower2=4:9)
   summary(ga)
-}
+
 }

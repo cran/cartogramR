@@ -40,21 +40,21 @@ make_layer <- function(x, type=c("final_centers", "original_centers", "centers_t
     return(y_geom)
   }
   if (type=="original_graticule") {
-    if (!(x$details["method"] %in% c("gsm", "gn"))) stop("cartogram method should be either 'gsm' or 'gn'")
-    bbox <- sf::st_bbox(x$initial_data)
-    LL <-  x$options$paramsint[1]
-    pf  <- x$options$paramsdouble[3]
+    if (!(attr(x, "method") %in% c("gsm", "gn"))) stop("cartogram method should be either 'gsm' or 'gn'")
+    bbox <- attr(x, "initial_bbox")
+    LL <-  attr(x, "options")$paramsint[1]
+    pf  <- attr(x, "options")$paramsdouble[3]
     graticule <- .Call(carto_makeoriggraticule, pf, as.integer(LL), bbox)
     sf::st_crs(graticule) <- sf::st_crs(x$cartogram)
     return(graticule)
   }
   if (type=="final_graticule") {
-    if (!(x$details["method"] %in% c("gsm", "gn"))) stop("cartogram method should be either 'gsm' or 'gn'")
-    bbox <- sf::st_bbox(x$initial_data)
-    if (x$options$options["gridexport"]==0)
+    if (!(attr(x, "method") %in% c("gsm", "gn"))) stop("cartogram method should be either 'gsm' or 'gn'")
+    bbox <- attr(x, "initial_bbox")
+    if (attr(x, "options")$options["gridexport"]==0)
       stop("cartogram does not include grid\n Rerun cartogramR with options=list(grid=TRUE)")
-    LL <-  x$options$paramsint[1]
-    pf  <- x$options$paramsdouble[3]
+    LL <-  attr(x, "options")$paramsint[1]
+    pf  <- attr(x, "options")$paramsdouble[3]
     graticule <- .Call(carto_makefinalgraticule, pf, as.integer(LL), bbox, x$gridx, x$gridy)
     sf::st_crs(graticule) <- sf::st_crs(x$cartogram)
     return(graticule)

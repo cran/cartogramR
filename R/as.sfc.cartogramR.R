@@ -14,5 +14,5 @@
 #' @md
 as.sfc.cartogramR <- function(x, ...) {
     if  (!inherits(x, "cartogramR")) stop(paste(deparse(substitute(x)), "must be a cartogramR object"))
-    return(x$cartogram)
+    return(sf::st_geometry(x$cartogram))
 }

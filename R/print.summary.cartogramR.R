@@ -41,10 +41,10 @@ print.summary.cartogramR <- function(x, ...) {
     cat("\n* Distortion of regions\n")
     cat("  Symmetrized difference error\n")
     if (!all(select)) {
-       ll <- c(list(x=x$qsymdiff), default_options, req_options[!select])
-       do.call(print, ll)
-    } else {
-       print(x$qsymdiff, digits = default_options$digits)
+      ll <- c(list(x=x$qsymdiff), default_options, req_options[!select])
+      do.call(print, ll)
+   } else {
+      print(x$qsymdiff, digits = default_options$digits)
     }
     invisible(x)
 }

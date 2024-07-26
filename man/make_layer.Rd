@@ -6,8 +6,8 @@
 \usage{
 make_layer(
   x,
-  type = c("final_centers", "original_centers", "centers_translation",
-    "final_graticule", "original_graticule")
+  type = c("final_centers", "original_centers", "centers_translation", "final_graticule",
+    "original_graticule")
 )
 }
 \arguments{

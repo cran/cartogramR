@@ -16,7 +16,9 @@ not specified (i.e., \verb{[missing](.)}, \verb{[signif]()} will not be
 called anymore (since \\R >= 3.4.0, where the default has been
 changed to only round in the \code{print} and \code{format} methods).
 - quantile.type integer code used in \verb{quantile(*, type=quantile.type)}.
-- center character string code used in \link{residuals.cartogramR}.}
+- center character string code used in \link{residuals.cartogramR}.
+- initial_data; the initial sf object given as input of cartogramR.
+Only needed for symmetric differences residuals.}
 }
 \value{
 A summary.cartogramR object: a list with the following components:
@@ -24,7 +26,8 @@ A summary.cartogramR object: a list with the following components:
 \item qrr, the summary of absolute relative residuals
 \item qres, the summary of absolute residuals
 \item qsymdiff, the summary of all pairwise symmetric difference beween two
-scaled (multi)polygons representative of two regions.
+scaled (multi)polygons representative of two regions. These residuals
+are calculated only if \code{initial_data} argument is provided.
 }
 }
 \description{

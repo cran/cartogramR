@@ -10,14 +10,14 @@
 #'   max_{polygons} |area_on_cartogram - target_area| <= abserror
 #'   (default to 10000)
 #' - abstol:  (`"dcn"`) the absolute convergence error tolerance:
-#'    max_{polygons} |area(i) - area(i-1)|
+#'    \eqn{max_\{polygons\} |area(i) - area(i-1)|}
 #'    default to 1000
 #' - relerror: (all method) Areas on cartogram differ at most by an
 #'     (absolute value of) relative error of relerror. That is,
-#'   max_{polygons} |area_on_cartogram / target_area - 1| <= relerror
+#'   \eqn{max_\{polygons\} |area_on_cartogram / target_area - 1| <= relerror}
 #'   (default to 0.01)
 #' - reltol:  (`"dcn"`) the absolute convergence tolerance:
-#'    max_{polygons} abs((area(i) - area(i-1))/area(i-1)
+#'    \eqn{max_\{polygons\} abs((area(i) - area(i-1))/area(i-1)}
 #'    default to 1e-3
 #' - L: (`"gsm" or "gn"`) integer, gives the value of `L` (default
 #'     is 512), must be a power of two (for fftw)

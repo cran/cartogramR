@@ -36,9 +36,9 @@ to_coord_polygon <- function(coord, carto) {
         if (ncol(coord)!=2) 
             stop("coordinates must be a vector of length 2 or a two columns matrix containing xy coordinates")
     }
-    LL <-  carto$options$paramsint[1]
-    padding <- carto$options$paramsdouble[3]
-    bbox <- sf::st_bbox(carto$initial_data)
+    LL <-  attr(carto, "options")$paramsint[1]
+    padding <- attr(carto, "options")$paramsdouble[3]
+    bbox <- attr(carto, "initial_bbox")
     Delta <- c(diff(bbox[c(1,3)]), diff(bbox[c(2,4)]))
     gg <- c(sum(bbox[c(1,3)]), sum(bbox[c(2,4)]))/2
     mm <- gg - Delta/2 * padding

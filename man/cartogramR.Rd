@@ -37,24 +37,21 @@ which process options see \link{cartogramR_options} for
 details. Default to \code{NULL}.}
 }
 \value{
-A list with the following components:
+A cartogramR object: a list with the following components:
 \itemize{
 \item cartogram: a sf object (in the same order of \code{data} or sorted by \code{idregion}
-see reordered argument) which contains the cartogram
-(ie the initial polygons after deformation)
-\item orig_area: original areas of regions
-\item final_area: final areas of regions in the cartogram
-\item orig_centers: the initial centers calculated with \link{st_point_on_surface}
+see reordered argument) which contains the initial data
+(without the geometry) with  three additionnal columns (orig_area: original
+areas of regions, final_area: final areas of regions in the cartogram
+and target_areas the targeted area) and a geometry part which is
+the cartogram (ie the initial polygons after deformation)
+\item orig_centers: the initial centers calculated with \link[sf:geos_unary]{sf::st_point_on_surface}
 \item final_centers: the centers after deformation
 \item gridx: (for flow-based method) final grid (x-axis) if requested
 (see \link{cartogramR_options} for details).
 \item gridy: (for flow-based method) final grid (y-axis) if requested
 (see \link{cartogramR_options} for details).
-\item count: the count by region
-\item target_area: target areas of regions
-\item initial_data: the initial sf object
-\item details: names of original data, idcount variable, algorithm
-\item options: values of options
+with additionnal attributes.
 }
 }
 \description{
