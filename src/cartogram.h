@@ -29,23 +29,6 @@ extern double MIN_POP_FAC, PADDING, BLUR_WIDTH;
 
 #define MAX(a,b) (((a)>(b)) ? (a) : (b))
 #define MIN(a,b) (((a)>(b)) ? (b) : (a))
-#define FREEG1 fftw_destroy_plan(plan_fwd);\
-   fftw_free(rho_ft);\
-   fftw_free(rho_init);\
-   for (i=0; i<n_poly; i++) free(polycorn[i]);\
-   free(polycorn);\
-   for (i=0; i<n_poly; i++) free(cartcorn[i]);\
-   free(cartcorn);\
-   for (i=0; i<n_reg; i++) free(polyinreg[i]);\
-   free(polyinreg);\
-   free(n_polyinreg);\
-   free(proj);\
-   free(proj3);\
-   free(target_area);\
-   free(area_err);\
-   free(cart_area)
-/* #define FREEGINV for (i=0; i<n_poly; i++) free(origcorn[i]);\ */
-/* 	free(origcorn) */
 
 
 /*********************************** Types. **********************************/
@@ -85,12 +68,12 @@ void fill_with_density1 (double* centroidx, double* centroidy,
 			 int* n_polycorn, double* varregion,
 			 int* nb_polyinreg, int* options,double*  original_area);
 void fill_with_density2 (int* n_polycorn);
-double interpol (double x, double y, double *grid, char zero, int* options, int error) ;
+double interpol (double x, double y, double *grid, char zero, int* options, int* error_ptr) ;
 void read_gen (int* nb_polyinreg, int* options);
-void ffb_integrate (int* options, int error);
-void diff_integrate (int* options, int error);
+void ffb_integrate (int* options, int* error_ptr);
+void diff_integrate (int* options, int* error_ptr);
 void project (double* centroidx, double* centroidy, Rboolean proj_graticule,
-	      int* options, int error, int* n_polycorn, Rboolean gridexport);
+	      int* options, int* error_ptr, int* n_polycorn, Rboolean gridexport);
 double max_area_err (double *area_err, double *cart_area,  int* n_polycorn,
 		     POINT **corn, double *sum_cart_area);
 double max_absarea_err (double *area_err, double *cart_area,  int* n_polycorn,

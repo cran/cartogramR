@@ -18,8 +18,10 @@
 #include <stdlib.h>
 #include <string.h>
 #include <Rmath.h> /* for fmin2 */
+#include <R.h>
+#include <Rinternals.h>
+#include <cleancall.h>
 #include "cartogram.h"
-
 /* -------------------------------- Main. ------------------------------- */
 /** \fn cartogramR
  * \param  rcentroidx Real vector of x-coordinates of centroids
@@ -32,6 +34,11 @@
  * \param rparamsdouble Real vector of real parameters
  * \param rparamsint Integer vector of integer parameters
  * \param roptions Integer vector of options
+ *  - roptions[0]>0 verbose mode
+ *  - roptions[1]>0 alors diff=TRUE
+ *  - roptions[2]>0 gridexport=TRUE
+ *  - roptions[3]>0 absrel= TRUE; else absrel = FALSE;
+ *  - roptions[4]=3000 max int iter in ffb_integrate or diff_integrate;
  * \return rans a R list
  * [[1]] rygeom the sf object (aka the cartogram)
  * [[2]] original area
@@ -56,6 +63,49 @@ double *rho_ft, *rho_init;
 fftw_plan plan_fwd;
 int lx, ly;
 /*----------------- end of Global variables. ----------------------*/
+
+/*----------------- struct of data. ----------------------*/
+typedef struct {
+  fftw_plan plan_fwd;
+  int n_poly;
+  int n_reg;
+  double *rho_ft;
+  double *rho_init;
+  POINT  **polycorn;
+  POINT **cartcorn;
+  int  **polyinreg;
+  int  *n_polyinreg;
+  POINT  *projinit;
+  POINT  *proj;
+  POINT  *proj2;
+  POINT *proj3;
+  double  *target_area;
+  double *area_err;
+  double *cart_area;
+} cartostruct;
+
+/*----------------- cleaning on early early-stop ------------------*/
+static void cartogramR_cleanup(void *data) {
+  int i;
+  cartostruct *pdata = data;
+  fftw_destroy_plan(pdata->plan_fwd);
+  fftw_free(pdata->rho_ft);
+  fftw_free(pdata->rho_init);
+  for (i=0; i<pdata->n_poly; i++) free(pdata->polycorn[i]);
+  free(pdata->polycorn);
+  for (i=0; i<pdata->n_poly; i++) free(pdata->cartcorn[i]);
+  free(pdata->cartcorn);
+  for (i=0; i<pdata->n_reg; i++) free(pdata->polyinreg[i]);
+  free(pdata->polyinreg);
+  free(pdata->n_polyinreg);
+  free(pdata->projinit);
+  free(pdata->proj);
+  free(pdata->proj2);
+  free(pdata->proj3);
+  free(pdata->target_area);
+  free(pdata->area_err);
+  free(pdata->cart_area);
+}
 
 
 SEXP cartogramR (SEXP rcentroidx, SEXP rcentroidy, SEXP rygeomd,
@@ -239,12 +289,35 @@ SEXP cartogramR (SEXP rcentroidx, SEXP rcentroidy, SEXP rygeomd,
   /*-------------------------------------------------------------------*/
   projsize = lx * ly * sizeof(POINT);
   proj = (POINT*) malloc(projsize);
+  proj2 = (POINT*) malloc(projsize);
+  projinit = (POINT*) malloc(projsize);
   proj3 = (POINT*) malloc(projsize);
   cartcorn = (POINT**) malloc(n_poly * sizeof(POINT*));
   for (i=0; i<n_poly; i++)
     cartcorn[i] = (POINT*) malloc(n_polycorn[i] * sizeof(POINT));
   area_err = (double*) malloc(n_reg * sizeof(double));
   cart_area = (double*) malloc(n_reg * sizeof(double));
+  /*-------------------------------------------------------------------*/
+  /* Allocate struct */
+  /*-------------------------------------------------------------------*/
+  cartostruct *datastruct_ptr = malloc(sizeof(cartostruct));
+  datastruct_ptr->plan_fwd = plan_fwd;
+  datastruct_ptr->n_poly = n_poly;
+  datastruct_ptr->n_reg = n_reg;
+  datastruct_ptr->rho_ft = rho_ft;
+  datastruct_ptr->rho_init = rho_init;
+  datastruct_ptr->polycorn = polycorn;
+  datastruct_ptr->cartcorn = cartcorn;
+  datastruct_ptr->polyinreg = polyinreg;
+  datastruct_ptr->n_polyinreg = n_polyinreg;
+  datastruct_ptr->projinit = projinit;
+  datastruct_ptr->proj = proj;
+  datastruct_ptr->proj2 = proj2;
+  datastruct_ptr->proj3 = proj3;
+  datastruct_ptr->target_area = target_area;
+  datastruct_ptr->area_err = area_err;
+  datastruct_ptr->cart_area = cart_area;
+  r_call_on_exit(cartogramR_cleanup, datastruct_ptr);
   /*-------------------------------------------------------------------*/
   /* Are we already at final point ?  */
   /*-------------------------------------------------------------------*/
@@ -253,10 +326,12 @@ SEXP cartogramR (SEXP rcentroidx, SEXP rcentroidy, SEXP rygeomd,
   } else {
     /* the first time we need to rescale the abserror criterion on cartogram scale */
     scale_map = scale_map_factor();
-     if (options[0]>1) Rprintf("initial max permitted area error: %f\n", MAX_PERMITTED_AREA_ERROR);
-     if (options[0]>1) Rprintf("scale map: %f\n", scale_map);
+    if (options[0]>1) Rprintf("initial max permitted area error: %f\n", MAX_PERMITTED_AREA_ERROR);
+    if (options[0]>1) Rprintf("scale map: %f\n", scale_map);
     MAX_PERMITTED_AREA_ERROR /= (scale_map * scale_map);
-         if (options[0]>1) Rprintf("rescale max permitted area error: %f\n", MAX_PERMITTED_AREA_ERROR);
+    if (options[0]>1) Rprintf("------------------------------------------------------------------\n");
+    if (options[0]>1) Rprintf("rescale max permitted area error: %f <- target to reach\n", MAX_PERMITTED_AREA_ERROR);
+    if (options[0]>1) Rprintf("------------------------------------------------------------------\n");
     curcrit = max_absarea_err(area_err, cart_area, n_polycorn, polycorn, &init_tot_area);
   }
   if (curcrit <= MAX_PERMITTED_AREA_ERROR) {
@@ -401,7 +476,6 @@ SEXP cartogramR (SEXP rcentroidx, SEXP rcentroidy, SEXP rygeomd,
     /* -------------------------------------------------------- */
     /* proj[i*ly+j] will store the current position of the point that started  */
     /* at (i+0.5, j+0.5).                                                      */
-    projinit = (POINT*) malloc(projsize);
     for (i = 0; i < lx; i++) {
       for (j = 0; j < ly; j++) {
         projinit[i * ly + j].x = i + 0.5;
@@ -424,27 +498,32 @@ SEXP cartogramR (SEXP rcentroidx, SEXP rcentroidy, SEXP rygeomd,
     if (options[0]>0) Rprintf("Starting iteration 1 ");
     if (options[0]>1) Rprintf("\n");
     if (!diff)
-      ffb_integrate(options, errorloc);
+      ffb_integrate(options, &errorloc);
     else
-      diff_integrate(options, errorloc);
+      diff_integrate(options, &errorloc);
     if (errorloc>0) {
       /* ------- free memory on error ------- */
-      FREEG1 ;
+      /* FREEG1 ; */
+      /* done since 1.2-0 by cleancall */
       /*---------- Unprotect. ----------------*/
       UNPROTECT(16);
       UNPROTECT(3); /* rygeom + rcentroidx2 + rcentroidy2*/
+        if (errorloc==4) {
+           Rprintf("increase maxit_internal or decreases the objective\n");
+        }
       error("error in ffb_integrate/diff_integrate");
-      return rans;
+      return R_NilValue;
     }
-    project(centroidx, centroidy, FALSE, options, errorloc, n_polycorn, gridexport);  /* FALSE because we do not need to project the graticule. */
+    project(centroidx, centroidy, FALSE, options, &errorloc, n_polycorn, gridexport);  /* FALSE because we do not need to project the graticule. */
     if (errorloc>0) {
       /* ------- free memory on error ------- */
-      FREEG1 ;
+      /* FREEG1 ; */
+      /* done since 1.2-0 by cleancall */
       /*---------- Unprotect. ----------------*/
       UNPROTECT(16);
       UNPROTECT(3); /* rygeom + rcentroidx2 + rcentroidy2*/
       error("error in project");
-      return rans;
+      return R_NilValue;
     }
 
     if (absrel) {
@@ -460,10 +539,10 @@ SEXP cartogramR (SEXP rcentroidx, SEXP rcentroidy, SEXP rygeomd,
     /* -------------------------------------------------------- */
     /* Additional integrations to come closer to target areas.*/
     /* -------------------------------------------------------- */
-    proj2 = (POINT*) malloc(projsize);
     integration = 1;
-    while (curcrit > MAX_PERMITTED_AREA_ERROR && integration<=maxit) {
-
+    while (curcrit > MAX_PERMITTED_AREA_ERROR && integration<maxit) {
+      if (options[0]>2) Rprintf("max iteration: %d\n", maxit);
+      R_CheckUserInterrupt();
       fill_with_density2(n_polycorn);
 
       /* Copy the current graticule before resetting. We will construct the    */
@@ -487,29 +566,34 @@ SEXP cartogramR (SEXP rcentroidx, SEXP rcentroidy, SEXP rygeomd,
       if (options[0]>0) Rprintf("Starting iteration %d ", integration);
       if (options[0]>1) Rprintf("\n");
       if (!diff)
-        ffb_integrate(options, errorloc);
+        ffb_integrate(options, &errorloc);
       else
-        diff_integrate(options, errorloc);
+        diff_integrate(options, &errorloc);
       if (errorloc>0) {
         /* ------- free memory on error ------- */
-        FREEG1;
-        free(proj2);
+        /* FREEG1 ; */
+        /* done since 1.2-0 by cleancall */
+        /*---------- Unprotect. ----------------*/
         UNPROTECT(16);
         UNPROTECT(3); /* rygeom + rcentroidx2 + rcentroidy2*/
+        if (errorloc==4) {
+           Rprintf("increase maxit_internal or decreases the objective\n");
+        }
         error("error in ffb_integrate/diff_integrate");
-        return rans;
+        return R_NilValue;
       }
-      project(centroidx, centroidy, TRUE, options, errorloc,
+      project(centroidx, centroidy, TRUE, options, &errorloc,
         n_polycorn, gridexport);
        /* TRUE because we need to project the graticule too. */
       if (errorloc>0) {
         /* ------- free memory on error ------- */
-        FREEG1;
-        free(proj2);
+        /* FREEG1 ; */
+        /* done since 1.2-0 by cleancall */
+        /*---------- Unprotect. ----------------*/
         UNPROTECT(16);
         UNPROTECT(3); /* rygeom + rcentroidx2 + rcentroidy2*/
         error("error in project");
-        return rans;
+        return R_NilValue;
       }
       /* Overwrite proj with proj2. */
       for (i=0; i<lx; i++)
@@ -557,7 +641,11 @@ SEXP cartogramR (SEXP rcentroidx, SEXP rcentroidy, SEXP rygeomd,
                                 cartcorn, &cart_tot_area);
         if (options[0]>1) Rprintf("after final correction, max. abs. area error: %f\n", curcrit);
       }
-    if (curcrit > MAX_PERMITTED_AREA_ERROR) Rprintf("WARNING criterion: %f > Objective: %f\n Increase maxit or decrease Objective\n", curcrit, MAX_PERMITTED_AREA_ERROR);
+      if (curcrit > MAX_PERMITTED_AREA_ERROR) {
+        if (options[0]>1) Rprintf("------------------------------------------------------------------\n");
+        Rprintf("WARNING criterion: %f > Objective: %f\n Increase maxit or decrease Objective\n", curcrit, MAX_PERMITTED_AREA_ERROR);
+        if (options[0]>1) Rprintf("------------------------------------------------------------------\n");
+      }
     /* -------------------------------------------------------- */
     /* Export the grid if needed */
     /* -------------------------------------------------------- */
@@ -694,11 +782,13 @@ SEXP cartogramR (SEXP rcentroidx, SEXP rcentroidy, SEXP rygeomd,
     SET_VECTOR_ELT(rans, 2, rfinal_area);
     /* -------------------------- end export------------------------- */
     /* ------------------------- Free memory. ----------------------- */
-    free(proj2);
   }
     /*------------------- End of main if then else ---------------*/
     /*------------------------ Free memory. ----------------------*/
-    FREEG1;
+    /* free(projinit); */
+    /* free(proj2); */
+    /* FREEG1; */
+    /* done since 1.2-0 by cleancall */
     /*------------------------ Unprotect. ----------------------*/
       UNPROTECT(16);
       UNPROTECT(3); /* rygeom + rcentroidx2 + rcentroidy2 */

@@ -1,6 +1,6 @@
 Package: cartogramR
-Version: 1.1-0
-Date: 2024-07-24
+Version: 1.2-0
+Date: 2024-09-03
 Title: Continuous Cartogram
 Authors@R: c(person(given = "Pierre-Andre",
                    family = "Cornillon",
@@ -20,7 +20,8 @@ Description: Procedures for making continuous cartogram. Procedures available ar
      rubber band based cartogram (Dougenik et al. (1985)
                         <doi:10.1111/j.0033-0124.1985.00075.x>).
 Depends: R (>= 3.5.0)
-Imports: sf, data.table
+Imports: sf, data.table, cleancall
+LinkingTo: cleancall
 Suggests: lwgeom
 SystemRequirements: FFTW (>=3.3.1); possible package: fftw-devel (rpm),
         libfftw3-dev (deb) or fftw (brew).
@@ -28,11 +29,11 @@ License: MIT + file LICENSE
 RoxygenNote: 7.2.3
 Encoding: UTF-8
 NeedsCompilation: yes
-Packaged: 2024-07-24 16:18:36 UTC; pac
+Packaged: 2024-09-03 14:23:14 UTC; pac
 Author: Pierre-Andre Cornillon [aut, cre],
   Florent Demoraes [aut],
   Flow-Based-Cartograms [cph] (Author of core C code for gsm and gn
     procedures)
 Maintainer: Pierre-Andre Cornillon <pierre-andre.cornillon@univ-rennes2.fr>
 Repository: CRAN
-Date/Publication: 2024-07-26 23:40:02 UTC
+Date/Publication: 2024-09-03 14:50:02 UTC

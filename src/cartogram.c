@@ -37,7 +37,7 @@ POINT affine_transf(int triid, POINT *tri, double x, double y);
 /********** Function to project the polygons in the input .gen file. *********/
 
 void project (double* centroidx, double* centroidy, Rboolean proj_graticule,
-	      int* options, int error, int* n_polycorn, Rboolean gridexport)
+	      int* options, int* error_ptr, int* n_polycorn, Rboolean gridexport)
 {
   double *xdisp, x2, *ydisp, y2, ctx, cty;
   int i, j;
@@ -60,17 +60,17 @@ void project (double* centroidx, double* centroidy, Rboolean proj_graticule,
   for (i=0; i<n_poly; i++)
     for (j=0; j<n_polycorn[i]; j++) {
       cartcorn[i][j].x =
-        interpol(polycorn[i][j].x, polycorn[i][j].y, xdisp, 'x', options, error)
+        interpol(polycorn[i][j].x, polycorn[i][j].y, xdisp, 'x', options, error_ptr)
         + polycorn[i][j].x;
-      if (error>0) {
+      if (*error_ptr>0) {
         free(xdisp);
         free(ydisp);
         return ;
       }
       cartcorn[i][j].y =
-        interpol(polycorn[i][j].x, polycorn[i][j].y, ydisp, 'y', options, error)
+        interpol(polycorn[i][j].x, polycorn[i][j].y, ydisp, 'y', options, error_ptr)
         + polycorn[i][j].y;
-      if (error>0) {
+      if (*error_ptr>0) {
         free(xdisp);
         free(ydisp);
         return ;
@@ -83,8 +83,8 @@ void project (double* centroidx, double* centroidy, Rboolean proj_graticule,
         ctx = proj3[i*ly + j].x ;
         cty = proj3[i*ly + j].y ;
         /* update grid */
-        proj3[i*ly + j].x = interpol(ctx, cty, xdisp, 'x', options, error) + ctx;
-        proj3[i*ly + j].y = interpol(ctx, cty, ydisp, 'y', options, error) + cty;
+        proj3[i*ly + j].x = interpol(ctx, cty, xdisp, 'x', options, error_ptr) + ctx;
+        proj3[i*ly + j].y = interpol(ctx, cty, ydisp, 'y', options, error_ptr) + cty;
       }
   }
     /****************** Project proj2 on the basis of proj. ******************/
@@ -92,14 +92,14 @@ void project (double* centroidx, double* centroidy, Rboolean proj_graticule,
     for (i=0; i<lx*ly; i++) {
       x2 = proj2[i].x;
       y2 = proj2[i].y;
-      proj2[i].x = interpol(x2, y2, xdisp, 'x', options, error) + x2;
-      if (error>0)  {
+      proj2[i].x = interpol(x2, y2, xdisp, 'x', options, error_ptr) + x2;
+      if (*error_ptr>0)  {
 				free(xdisp);
 				free(ydisp);
 				return ;
       }
-      proj2[i].y = interpol(x2, y2, ydisp, 'y', options, error) + y2;
-      if (error>0)  {
+      proj2[i].y = interpol(x2, y2, ydisp, 'y', options, error_ptr) + y2;
+      if (*error_ptr>0)  {
 				free(xdisp);
 				free(ydisp);
 				return ;
@@ -111,14 +111,14 @@ void project (double* centroidx, double* centroidy, Rboolean proj_graticule,
     for (i=0; i<n_reg; i++) {
       ctx = centroidx[i];
       cty = centroidy[i];
-      centroidx[i] = interpol(ctx, cty, xdisp, 'x', options, error) + ctx;
-      if (error>0)  {
+      centroidx[i] = interpol(ctx, cty, xdisp, 'x', options, error_ptr) + ctx;
+      if (*error_ptr>0)  {
 	free(xdisp);
 	free(ydisp);
 	return ;
       }
-      centroidy[i] = interpol(ctx, cty, ydisp, 'y', options, error) + cty;
-      if (error>0)  {
+      centroidy[i] = interpol(ctx, cty, ydisp, 'y', options, error_ptr) + cty;
+      if (*error_ptr>0)  {
 	free(xdisp);
 	free(ydisp);
 	return ;

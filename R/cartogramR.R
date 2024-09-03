@@ -146,7 +146,7 @@ if (method=="dcn") {
     nb_polyinreg <- table(facteur)
     attributs <- attributes(y_geom)
     bbox <- sf::st_bbox(data)[c(1,3,2,4)]
-    results <- .Call(carto_cartogramR, centersx, centersy, y_geom, as.double(target_area),
+    results <- cleancall::call_with_cleanup(carto_cartogramR, centersx, centersy, y_geom, as.double(target_area),
               as.integer(nb_polyinreg),  as.integer(n_polycorn),
               as.integer(c(length(facteur), n_reg, min_id, max_id)),
               bbox, currentoptions$paramsdouble, as.integer(currentoptions$paramsint),

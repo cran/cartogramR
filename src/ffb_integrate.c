@@ -129,21 +129,20 @@ void ffb_calcv (double t)
 /* all the way to the edge (i.e. the slope is 0 consistent with a cosine     */
 /* transform).                                                               */
 
-double interpol (double x, double y, double *grid, char zero, int* options, int error)
+double interpol (double x, double y, double *grid, char zero, int* options, int* error_ptr)
 {
   double delta_x, delta_y, fx0y0, fx0y1, fx1y0, fx1y1, x0, x1, y0, y1;
-  
-  if (x<0 || x>lx || y<0 || y>ly) {
+ if (x<0 || x>lx || y<0 || y>ly) {
     if (options[0]>0) {
       Rprintf("ERROR: coordinate outside bounding box in interpol().\n");
       Rprintf("x=%f, y=%f\n", x, y);
     }
-    error=1;
+    *error_ptr=1;
     return -1;
   }
   if (zero != 'x' && zero != 'y' ) {
     if (options[0]>0) Rprintf("ERROR: unknown argument zero in interpol().\n");
-    error=2;
+    *error_ptr=2;
     return -1;
   }
   
@@ -204,13 +203,14 @@ double interpol (double x, double y, double *grid, char zero, int* options, int 
 /* Function to integrate the equations of motion with the fast flow-based    */
 /* method.                                                                   */
 
-void ffb_integrate (int* options, int errorloc)
+void ffb_integrate (int* options, int* error_ptr)
 {
   Rboolean accept;
   double delta_t, t, *vx_intp, *vx_intp_half, *vy_intp, *vy_intp_half;
-  int iter, k;
+  int iter, k, errorloc;
   POINT *eul, *mid;
-  
+
+  errorloc=error_ptr[0];
   /****************** Allocate memory for the velocity grid. *****************/
   
   gridvx = (double*) malloc(lx * ly * sizeof(double));
@@ -264,7 +264,7 @@ void ffb_integrate (int* options, int errorloc)
   
   do {
     ffb_calcv(t);
-/* #pragma omp parallel for */
+    /* #pragma omp parallel for */
 #pragma omp parallel shared(errorloc)
 #pragma omp for    nowait reduction(max : errorloc)
     for (k=0; k<lx*ly; k++) {
@@ -274,10 +274,11 @@ void ffb_integrate (int* options, int errorloc)
       /* is inside the rectangle [0, lx] x [0, ly]. This fact guarantees     */
       /* that interpol() is given a point that cannot cause it to fail.      */
       
-      vx_intp[k] = interpol(proj[k].x, proj[k].y, gridvx, 'x', options, errorloc);
-      vy_intp[k] = interpol(proj[k].x, proj[k].y, gridvy, 'y', options, errorloc);
+      vx_intp[k] = interpol(proj[k].x, proj[k].y, gridvx, 'x', options, &errorloc);
+      vy_intp[k] = interpol(proj[k].x, proj[k].y, gridvy, 'y', options, &errorloc);
     }
     if (errorloc>0) {
+      error_ptr[0]=errorloc;
       /* Free memory. */
       fftw_destroy_plan(plan_grid_fluxx_init);
       fftw_destroy_plan(plan_grid_fluxy_init);
@@ -297,8 +298,7 @@ void ffb_integrate (int* options, int errorloc)
     while (!accept) {
       
       /* Simple Euler step. */
-      
-/* #pragma omp parallel for */
+     /* #pragma omp parallel for */
       for (k=0; k<lx*ly; k++) {
       	eul[k].x = proj[k].x + vx_intp[k] * delta_t;
       	eul[k].y = proj[k].y + vy_intp[k] * delta_t;
@@ -321,10 +321,10 @@ void ffb_integrate (int* options, int errorloc)
       	    proj[k].x + 0.5*delta_t*vx_intp[k] > lx ||
       	    proj[k].y + 0.5*delta_t*vy_intp[k] < 0.0 ||
       	    proj[k].y + 0.5*delta_t*vy_intp[k] > ly) {
-      	  accept = FALSE;
-	  delta_t *= DEC_AFTER_NOT_ACC;
-	  break;
-	}
+          accept = FALSE;
+          delta_t *= DEC_AFTER_NOT_ACC;
+          break;
+        }
       if (accept) {
 	
       	/* OK, we can run interpol(). */
@@ -334,10 +334,10 @@ void ffb_integrate (int* options, int errorloc)
         for (k=0; k<lx*ly; k++) {
       	  vx_intp_half[k] = interpol(proj[k].x + 0.5*delta_t*vx_intp[k],
 				     proj[k].y + 0.5*delta_t*vy_intp[k],
-				     gridvx, 'x', options, errorloc);
+				     gridvx, 'x', options, &errorloc);
       	  vy_intp_half[k] = interpol(proj[k].x + 0.5*delta_t*vx_intp[k],
 				     proj[k].y + 0.5*delta_t*vy_intp[k],
-				     gridvy, 'y', options, errorloc);
+				     gridvy, 'y', options, &errorloc);
       	  mid[k].x = proj[k].x + vx_intp_half[k] * delta_t;
       	  mid[k].y = proj[k].y + vy_intp_half[k] * delta_t;
 	  
@@ -347,37 +347,55 @@ void ffb_integrate (int* options, int errorloc)
 	  /* of the positions wandered out of the boundaries. If it          */
       	  /* happened, decrease the time step.                               */
 	  
-      	  if ((mid[k].x-eul[k].x) * (mid[k].x-eul[k].x) +
-	      (mid[k].y-eul[k].y) * (mid[k].y-eul[k].y) > ABS_TOL ||
-	      mid[k].x < 0.0 || mid[k].x > lx ||
-	      mid[k].y < 0.0 || mid[k].y > ly)
-      	    accept = FALSE;
+          if ((mid[k].x-eul[k].x) * (mid[k].x-eul[k].x) +
+              (mid[k].y-eul[k].y) * (mid[k].y-eul[k].y) > ABS_TOL ||
+              mid[k].x < 0.0 || mid[k].x > lx ||
+              mid[k].y < 0.0 || mid[k].y > ly)
+            accept = FALSE;
         }
-	  if (errorloc>0)  {
-	/* Free memory. */
-	fftw_destroy_plan(plan_grid_fluxx_init);
-	fftw_destroy_plan(plan_grid_fluxy_init);
-	free(gridvx);
-	free(gridvy);
-	fftw_free(grid_fluxx_init);
-	fftw_free(grid_fluxy_init);
-	free(eul);
-	free(mid);
-	free(vx_intp);
-	free(vy_intp);
-	free(vx_intp_half);
-	free(vy_intp_half);
-	return ;
-      }
+        if (errorloc>0)  {
+          error_ptr[0]=errorloc;
+	        /* Free memory. */
+          fftw_destroy_plan(plan_grid_fluxx_init);
+          fftw_destroy_plan(plan_grid_fluxy_init);
+          free(gridvx);
+          free(gridvy);
+          fftw_free(grid_fluxx_init);
+          fftw_free(grid_fluxy_init);
+          free(eul);
+          free(mid);
+          free(vx_intp);
+          free(vy_intp);
+          free(vx_intp_half);
+          free(vy_intp_half);
+          return ;
+        }
       }
       if (!accept)
-	delta_t *= DEC_AFTER_NOT_ACC;
+        delta_t *= DEC_AFTER_NOT_ACC;
     }
     
     /* Control output. */
     
     if (options[0]>1) if (iter % 10 == 0) Rprintf("iter = %d, t = %e, delta_t = %e\n", iter, t, delta_t);
-    
+    if (iter > options[4]) {
+      if (options[0]>1) Rprintf("Number of iterations > maxit_internal:\n exiting ffb_integrate too early\n");
+	        /* Free memory. */
+          fftw_destroy_plan(plan_grid_fluxx_init);
+          fftw_destroy_plan(plan_grid_fluxy_init);
+          free(gridvx);
+          free(gridvy);
+          fftw_free(grid_fluxx_init);
+          fftw_free(grid_fluxy_init);
+          free(eul);
+          free(mid);
+          free(vx_intp);
+          free(vy_intp);
+          free(vx_intp_half);
+          free(vy_intp_half);
+          error_ptr[0]=4;
+          return ;
+    }
     /* When we get here, the integration step was accepted. */
     
     t += delta_t;

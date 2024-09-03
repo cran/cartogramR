@@ -15,6 +15,8 @@ cartogramR_options(
 \itemize{
 \item maxit:  (all method) the maximum number of iterations,
 default to 50.
+\item maxit_internal:  (\verb{"gsm" or "gn"}) the maximum number of internal
+iterations, default to 10000.
 \item absrel:  (all method)  boolean, if \code{TRUE} relative convergence
 if \code{FALSE} absolute convergence (default to \code{TRUE})
 \item abserror: (all method) Areas on cartogram differ at most by an

@@ -43,13 +43,13 @@ double *rho;
 fftw_plan plan_gridvx, plan_gridvy, plan_rho;
 
 /**************************** Function prototypes. ***************************/
-void diff_calcv (double t, int* options, int error);
+void diff_calcv (double t, int* options, int* error_ptr);
 
 /*****************************************************************************/
 /* Function to calculate the velocity at the grid points (x, y) with x =     */
 /* 0.5, 1.5, ..., lx-0.5 and y = 0.5, 1.5, ..., ly-0.5 at time t.            */
 
-void diff_calcv (double t, int* options, int error)
+void diff_calcv (double t, int* options, int* error_ptr)
 {
   double dlx, dly;
   int i, j;
@@ -103,7 +103,7 @@ void diff_calcv (double t, int* options, int error)
 	  Rprintf("ERROR: division by zero in diff_calcv()\n");
 	  Rprintf("rho[%d, %d] = %e\n", i, j, rho[i*ly + j]);
 	}
-	error=3;
+	*error_ptr=3;
 	return;
 	//exit(1);
       }
@@ -117,14 +117,13 @@ void diff_calcv (double t, int* options, int error)
 /*****************************************************************************/
 /* Function to integrate the equations of motion with the diffusion method.  */
 
-void diff_integrate (int* options,int error)
+void diff_integrate (int* options,int* error_ptr)
 {
   Rboolean accept;
   double delta_t, max_change, t, *vx_intp, *vx_intp_half, *vy_intp,
     *vy_intp_half;
   int iter, k;
   POINT *eul, *mid;
-  
   /*************** Allocate memory for the Fourier transforms. ***************/
   rho = fftw_malloc(lx * ly * sizeof(double));
   gridvx = fftw_malloc(lx * ly * sizeof(double));
@@ -167,7 +166,7 @@ void diff_integrate (int* options,int error)
   delta_t = 1e-2;                                      /* Initial time step. */
   iter = 0;  
   do {    
-    diff_calcv(t, options, error);
+    diff_calcv(t, options, error_ptr);
     for (k=0; k<lx*ly; k++) {
       
       /* We know, either because of the initialization or because of the     */
@@ -175,8 +174,8 @@ void diff_integrate (int* options,int error)
       /* is inside the rectangle [0, lx] x [0, ly]. This fact guarantees     */
       /* that interpol() is given a point that cannot cause it to fail.      */
       
-      vx_intp[k] = interpol(proj[k].x, proj[k].y, gridvx, 'x', options, error);
-      if (error>0)   {
+      vx_intp[k] = interpol(proj[k].x, proj[k].y, gridvx, 'x', options, error_ptr);
+      if (*error_ptr>0)   {
 	fftw_destroy_plan(plan_rho);
 	fftw_destroy_plan(plan_gridvx);
 	fftw_destroy_plan(plan_gridvy);
@@ -191,8 +190,8 @@ void diff_integrate (int* options,int error)
 	free(vy_intp_half);
 	return ;
       }
-      vy_intp[k] = interpol(proj[k].x, proj[k].y, gridvy, 'y', options, error);
-      if (error>0)   {
+      vy_intp[k] = interpol(proj[k].x, proj[k].y, gridvy, 'y', options, error_ptr);
+      if (*error_ptr>0)   {
 	fftw_destroy_plan(plan_rho);
 	fftw_destroy_plan(plan_gridvx);
 	fftw_destroy_plan(plan_gridvy);
@@ -226,8 +225,8 @@ void diff_integrate (int* options,int error)
       /*                        t + 0.5*delta_t)                             */
       /* and similarly for y.                                                */
       
-      diff_calcv(t + 0.5*delta_t, options, error);
-      if (error>0)  {
+      diff_calcv(t + 0.5*delta_t, options, error_ptr);
+      if (*error_ptr>0)  {
 	fftw_destroy_plan(plan_rho);
 	fftw_destroy_plan(plan_gridvx);
 	fftw_destroy_plan(plan_gridvy);
@@ -261,8 +260,8 @@ void diff_integrate (int* options,int error)
 	for (k=0; k<lx*ly; k++) {
 	  vx_intp_half[k] = interpol(proj[k].x + 0.5*delta_t*vx_intp[k],
 				     proj[k].y + 0.5*delta_t*vy_intp[k],
-				     gridvx, 'x', options, error);
-          if (error>0)   {
+				     gridvx, 'x', options, error_ptr);
+          if (*error_ptr>0)   {
 	fftw_destroy_plan(plan_rho);
 	fftw_destroy_plan(plan_gridvx);
 	fftw_destroy_plan(plan_gridvy);
@@ -280,8 +279,8 @@ void diff_integrate (int* options,int error)
 
 	  vy_intp_half[k] = interpol(proj[k].x + 0.5*delta_t*vx_intp[k],
 				     proj[k].y + 0.5*delta_t*vy_intp[k],
-				     gridvy, 'y', options, error);
-          if (error>0)   {
+				     gridvy, 'y', options, error_ptr);
+          if (*error_ptr>0)   {
 	fftw_destroy_plan(plan_rho);
 	fftw_destroy_plan(plan_gridvx);
 	fftw_destroy_plan(plan_gridvy);
@@ -326,6 +325,23 @@ void diff_integrate (int* options,int error)
 		       (mid[k].y-proj[k].y)*(mid[k].y-proj[k].y),
 		       max_change);
     if (options[0]>1) if (iter % 10 == 0) Rprintf("iter = %d, t = %e, delta_t = %e, max_change = %e\n",iter, t, delta_t, max_change);
+    if (iter > options[4]) {
+      if (options[0]>1) Rprintf("Number of iterations > maxit_internal:\n exiting diff_integrate too early\n");
+      /* Free memory. */
+      fftw_destroy_plan(plan_rho);
+      fftw_destroy_plan(plan_gridvx);
+      fftw_destroy_plan(plan_gridvy);
+      fftw_free(rho);
+      fftw_free(gridvx);
+      fftw_free(gridvy);
+      free(eul);
+      free(mid);
+      free(vx_intp);
+      free(vy_intp);
+      free(vx_intp_half);
+      free(vy_intp_half);
+      return ;
+    }
     
     /* When we get here, the integration step was accepted. */
     

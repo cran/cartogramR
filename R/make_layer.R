@@ -30,14 +30,10 @@ make_layer <- function(x, type=c("final_centers", "original_centers", "centers_t
   if  (!inherits(x, "cartogramR")) stop(paste(deparse(substitute(x)), "must be a cartogramR object"))
   type <- match.arg(type)
   if (type=="final_centers") {
-    y_geom <- st_sfc(sf::st_multipoint(x$final_centers))
-    st_crs(y_geom) <- st_crs(x$cartogram)
-    return(y_geom)
+    return(x$final_centers)
   }
   if (type=="original_centers") {
-    y_geom <- st_sfc(sf::st_multipoint(x$orig_centers))
-    st_crs(y_geom) <- st_crs(x$cartogram)
-    return(y_geom)
+    return(x$orig_centers)
   }
   if (type=="original_graticule") {
     if (!(attr(x, "method") %in% c("gsm", "gn"))) stop("cartogram method should be either 'gsm' or 'gn'")
@@ -60,7 +56,9 @@ make_layer <- function(x, type=c("final_centers", "original_centers", "centers_t
     return(graticule)
   }
   if (type=="centers_translation") {
-     coordLine <-lapply(1:nrow(x$orig_centers), function(n) { sf::st_linestring(rbind(x$orig_centers[n,],x$final_centers[n,]))})
+    matorig <- sf::st_coordinates(x$orig_centers)[,1:2]
+    matfinal <- sf::st_coordinates(x$final_centers)[,1:2]
+     coordLine <-lapply(1:nrow(matorig), function(n) { sf::st_linestring(rbind(matorig[n,],matfinal[n,]))})
     movement <- sf::st_sfc(coordLine)
     sf::st_crs(movement) <- sf::st_crs(x$cartogram)
     return(movement)

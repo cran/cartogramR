@@ -3,6 +3,8 @@
 #' @param options a named list with some (or all) the following components:
 #' - maxit:  (all method) the maximum number of iterations,
 #'       default to 50.
+#' - maxit_internal:  (`"gsm" or "gn"`) the maximum number of internal
+#'       iterations, default to 10000.
 #' - absrel:  (all method)  boolean, if `TRUE` relative convergence
 #'      if `FALSE` absolute convergence (default to `TRUE`)
 #' - abserror: (all method) Areas on cartogram differ at most by an
@@ -78,7 +80,7 @@ cartogramR_options <- function(options,
   if (method=="DougenikChrismanNiemeyer") method <- "dcn"
   if (method=="GastnerNewman") method <- "gn"
   if (method=="GastnerSeguyMore") method <- "gsm"
-  resd <- list("maxit"=50L, "relerror"=1e-2, "reltol"=1e-3,
+  resd <- list("maxit"=50L, "maxit_internal"=10000L, "relerror"=1e-2, "reltol"=1e-3,
                "abserror"=1e4, "abstol"=1e3, absrel=TRUE, "L"=512L,
                "mp" = 0.2, "pf"=1.5 , "sigma"= 5, "verbose"=0,
                "grid"=TRUE, check.ring.dir=TRUE, check.only=FALSE,
@@ -93,8 +95,8 @@ cartogramR_options <- function(options,
       resd$center <- sf::st_centroid else
                                                resd$center <- sf::st_point_on_surface
   }
-  if (all(unlist(lapply(resd[c("maxit","relerror","reltol","abserror","abstol","L", "mp", "pf", "sigma", "verbose")],is.numeric)))) {
-    if (resd$maxit<=1) stop("at least 2 iterations")
+  if (all(unlist(lapply(resd[c("maxit","maxit_internal","relerror","reltol","abserror","abstol","L", "mp", "pf", "sigma", "verbose")],is.numeric)))) {
+    if (resd$maxit<1) stop("at least 1 iteration")
     if (resd$abserror<=0) stop("absolute error must be strictly positive")
     if (resd$abstol<=0) stop("absolute tolerance must be strictly positive")
     if (resd$relerror<=0) stop("relative error must be strictly positive")
@@ -107,7 +109,7 @@ cartogramR_options <- function(options,
     if (resd$sigma<=0) stop("sigma must be positive")
     if (resd$verbose<0) stop("verbose must be non negative")
   } else {
-    stop("one or several parameters in the following list:\nmaxit, relerror, reltol, abserror, abstol,  L,  mp, pf, sigma, verbose\nare not numeric")
+    stop("one or several parameters in the following list:\nmaxit, maxit_internal, relerror, reltol, abserror, abstol,  L,  mp, pf, sigma, verbose\nare not numeric")
   }
   if (!is.logical(resd$absrel)) stop("absrel must be boolean")
   if (!is.logical(resd$grid)) stop("grid must be boolean")
@@ -130,7 +132,8 @@ cartogramR_options <- function(options,
                        options=c(verbose=resd$verbose,
                                  diff=ifelse(method=="gn",1,0),
                                  gridexport=as.numeric(resd$grid),
-                                 absrel=as.integer(resd$absrel)),
+                                 absrel=as.integer(resd$absrel),
+                                 maxitint=as.integer(resd$maxit_internal)),
                        check.ring.dir=resd$check.ring.dir, check.only=resd$check.only, center=resd$center))
   }
 }

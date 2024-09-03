@@ -23,7 +23,7 @@
 #'   plot(moregeom, add=TRUE, col=2, pch=15)
 #' }
 #'
-#' @rdname geom_cartogramR-deprecated
+#' @rdname cartogramR-deprecated
 #'
 #' @export
 geom_cartogramR <- function(sfgeom, carto, verbose=FALSE) {
