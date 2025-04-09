@@ -1,15 +1,11 @@
 #' Set the options of [cartogramR] in the correct format
 #'
 #' @param options a named list with some (or all) the following components:
-#' - maxit:  (all method) the maximum number of iterations,
-#'       default to 50.
-#' - maxit_internal:  (`"gsm" or "gn"`) the maximum number of internal
-#'       iterations, default to 10000.
 #' - absrel:  (all method)  boolean, if `TRUE` relative convergence
 #'      if `FALSE` absolute convergence (default to `TRUE`)
 #' - abserror: (all method) Areas on cartogram differ at most by an
 #'     (absolute value of) error of abserror. That is,
-#'   max_{polygons} |area_on_cartogram - target_area| <= abserror
+#'   \eqn{max_{polygons} |area_on_cartogram - target_area| <= abserror}
 #'   (default to 10000)
 #' - abstol:  (`"dcn"`) the absolute convergence error tolerance:
 #'    \eqn{max_\{polygons\} |area(i) - area(i-1)|}
@@ -19,15 +15,22 @@
 #'   \eqn{max_\{polygons\} |area_on_cartogram / target_area - 1| <= relerror}
 #'   (default to 0.01)
 #' - reltol:  (`"dcn"`) the absolute convergence tolerance:
-#'    \eqn{max_\{polygons\} abs((area(i) - area(i-1))/area(i-1)}
+#'    \eqn{max_\{polygons\} abs(area(i) - area(i-1))/area(i-1)}
 #'    default to 1e-3
 #' - L: (`"gsm" or "gn"`) integer, gives the value of `L` (default
 #'     is 512), must be a power of two (for fftw)
+#' - maxit:  (all method) the maximum number of iterations,
+#'       default to 50 for `"gsm" or "gn"` and 5000 for `"dcn"`.
+#' - maxit_internal:  (`"gsm" or "gn"`) the maximum number of internal
+#'       iterations, default to 10000.
+#' - min_deltat:  (`"gsm" or "gn"`) the time step minimum, default to 1e-14.
 #' - mp: (all method) if a region contains exactly zero population, it will be
 #'   replaced by mp times the smallest (strictly) positive population in any
 #'   region (default to 0.2)
 #' - pf: (`"gsm" or "gn"`) Determines space between map and boundary (default to 1.5)
 #' - sigma: (`"gsm" or "gn"`) Width of Gaussian blur to smoothen the density (default to 5)
+#' - maxinc: (`"gsm" or "gn"`) number of times algorithm is allowed to
+#'      increase (default to 3)
 #' - center: (`"gsm" or "gn"`) either a character string
 #'    (only possible choices are `"centroid"`
 #'     or `"point_on_surface"`) or a function. If the
@@ -35,8 +38,6 @@
 #'    calculate the "center" of polygons; `"point_on_surface"`
 #'      will use the function [sf::st_point_on_surface]
 #'      while `"centroid"` (the default) will use [sf::st_centroid].
-#' - verbose: (all method) integer giving the verbosity level
-#'           (default to `0`, not verbose)
 #' - grid: (`"gsm" or "gn"`) boolean, if `TRUE` export the final
 #'      grid from flow algorithm (default to `TRUE`). Setting to `FALSE`
 #`      reduce memory allocation but it will be impossible to add further
@@ -44,7 +45,17 @@
 #' - check.ring.dir: (all method) boolean, if `TRUE` controls polygons orientation
 #'   (default to `TRUE`)
 #' - check.only: (all method) boolean, if `TRUE` control only polygons orientation
-#'      and no replacement is done (default to `FALSE`)
+#' - check.duplicated: (all method) boolean, if `TRUE` controls
+#'      if polygons have duplicated points (default to `TRUE`)
+#' - verbose: (all method) integer giving the verbosity level
+#'           (default to `0`, not verbose)
+#' - num_threads: (all method) int, number of threads (default to 1).
+#'                For `"dcn"` used for centroid calculations.
+#'                If multipolygons/regions have huge
+#'                 number of points it can be useful to set it to a small
+#'                 number (2 or 3 ?). For `"gsm"` useful for large grid.
+#'                 `num_threads=-1` means that open MP will choose the
+#'                 number of threads using maximum.
 #' @param method the method to be used, can be one of the following:
 #'        `gsm` or `GastnerSeguyMore` (default), `gn` or
 #'        `GastnerNewman`, `dcn` or `DougenikChrismanNiemeyer`.
@@ -80,11 +91,11 @@ cartogramR_options <- function(options,
   if (method=="DougenikChrismanNiemeyer") method <- "dcn"
   if (method=="GastnerNewman") method <- "gn"
   if (method=="GastnerSeguyMore") method <- "gsm"
-  resd <- list("maxit"=50L, "maxit_internal"=10000L, "relerror"=1e-2, "reltol"=1e-3,
-               "abserror"=1e4, "abstol"=1e3, absrel=TRUE, "L"=512L,
-               "mp" = 0.2, "pf"=1.5 , "sigma"= 5, "verbose"=0,
-               "grid"=TRUE, check.ring.dir=TRUE, check.only=FALSE,
-               center="centroid")
+  resd <- list("relerror"=1e-2, "reltol"=1e-3,
+               "abserror"=1e4, "abstol"=1e3, absrel=TRUE, "L"=512L,"maxit"=ifelse(method=="dcn", 5000L, 50L), "maxit_internal"=10000L, "min_deltat"=1e-14,
+               "mp" = 0.2, "pf"=1.5 , "sigma"= 5, "maxinc"=3, "grid"=TRUE, check.ring.dir=TRUE, check.only=FALSE, check.duplicated=TRUE,
+               center="centroid", "verbose"=0,
+               num_threads=1)
   select <- names(options) %in% names(resd)
   if (!all(select)) stop(paste("the following name(s)",names(options)[!select],"does/do not match the options name"))
   resd[names(options)] <- options
@@ -95,8 +106,10 @@ cartogramR_options <- function(options,
       resd$center <- sf::st_centroid else
                                                resd$center <- sf::st_point_on_surface
   }
-  if (all(unlist(lapply(resd[c("maxit","maxit_internal","relerror","reltol","abserror","abstol","L", "mp", "pf", "sigma", "verbose")],is.numeric)))) {
+  if (all(unlist(lapply(resd[c("maxit","maxit_internal","min_deltat", "relerror","reltol","abserror","abstol","L", "mp", "pf", "sigma", "maxinc", "verbose", "num_threads")],is.numeric)))) {
     if (resd$maxit<1) stop("at least 1 iteration")
+    if (resd$maxit_internal<2) stop("at least 2 for max of iterations")
+    if (resd$min_deltat<=0) stop("delta_t must be positive (and usually small)")
     if (resd$abserror<=0) stop("absolute error must be strictly positive")
     if (resd$abstol<=0) stop("absolute tolerance must be strictly positive")
     if (resd$relerror<=0) stop("relative error must be strictly positive")
@@ -107,14 +120,17 @@ cartogramR_options <- function(options,
     if (resd$mp<=0) stop("mp must be positive")
     if (resd$pf<1) stop("pf must greater or equal to 1")
     if (resd$sigma<=0) stop("sigma must be positive")
+    if (resd$maxinc<=0) stop("maxinc must be positive")
     if (resd$verbose<0) stop("verbose must be non negative")
+    if ((resd$num_threads==0)|(resd$num_threads< -1)) stop("num_threads must be either greater or equal to 1 or equal to -1 (automatic)")
   } else {
-    stop("one or several parameters in the following list:\nmaxit, maxit_internal, relerror, reltol, abserror, abstol,  L,  mp, pf, sigma, verbose\nare not numeric")
+    stop("one or several parameters in the following list:\nmaxit, maxit_internal, relerror, reltol, abserror, abstol,  L,  mp, pf, sigma, verbose, num_threads\nare not numeric")
   }
   if (!is.logical(resd$absrel)) stop("absrel must be boolean")
   if (!is.logical(resd$grid)) stop("grid must be boolean")
   if (!is.logical(resd$check.ring.dir)) stop("check.ring.dir must be boolean")
   if (!is.logical(resd$check.only)) stop("check.only must be boolean")
+  if (!is.logical(resd$check.duplicated)) stop("check.duplicated must be boolean")
   if (method=="dcn") {
     resd$center <- sf::st_centroid
     return(list(paramsdouble=c(ifelse(resd$absrel, resd$relerror, resd$abserror),
@@ -122,9 +138,13 @@ cartogramR_options <- function(options,
                                mp=resd$mp),
                 paramsint=c(maxit=resd$maxit),
                 options=c(verbose=resd$verbose,
-                          absrel=as.integer(resd$absrel)),
-                check.ring.dir=resd$check.ring.dir, check.only=resd$check.only, center=resd$center))
-  } else { return(list(paramsdouble=c(ifelse(resd$absrel, resd$relerror,
+                          absrel=as.integer(resd$absrel),
+                          num_threads=as.integer(resd$num_threads),
+                          maxinc=as.integer(resd$maxinc)),
+                check.ring.dir=resd$check.ring.dir, check.only=resd$check.only, center=resd$center,
+                check.duplicated=resd$check.duplicated))
+  } else {
+    return(list(paramsdouble=c(ifelse(resd$absrel, resd$relerror,
                                              resd$abserror),
                                       mp=resd$mp,
                                       pf=resd$pf,sigma=resd$sigma),
@@ -133,7 +153,9 @@ cartogramR_options <- function(options,
                                  diff=ifelse(method=="gn",1,0),
                                  gridexport=as.numeric(resd$grid),
                                  absrel=as.integer(resd$absrel),
-                                 maxitint=as.integer(resd$maxit_internal)),
-                       check.ring.dir=resd$check.ring.dir, check.only=resd$check.only, center=resd$center))
+                                 maxitint=as.integer(resd$maxit_internal),
+                                 mindeltat=as.integer(-log10(resd$min_deltat)),
+                          num_threads=as.integer(resd$num_threads)),
+                       check.ring.dir=resd$check.ring.dir, check.only=resd$check.only, center=resd$center, check.duplicated=resd$check.duplicated))
   }
 }

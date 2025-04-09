@@ -68,11 +68,12 @@ method <- match.arg(method)
 if (method=="DougenikChrismanNiemeyer") method <- "dcn"
 if (method=="GastnerNewman") method <- "gn"
 if (method=="GastnerSeguyMore") method <- "gsm"
-if (!inherits(data, "sf")) stop(paste(deparse(substitute((data))),"not inherits from sf class"))
+original_name <- deparse(substitute(data))
+if (!inherits(data, "sf")) stop(paste0("(", original_name,") ","not inherits from sf class"))
 if (is.na(sf::st_crs(data))) {
   warning("No coordinate reference system !\n Function proceeds assuming planar coordinates\n Remarks:\n 1. This function use planar coordinates to calculate areas and thus does not give correct answers for longitude/latitude data\n 2. Setting coordinate reference system could be a good idea, see sf::st_crs")
 } else {
-  if (sf::st_is_longlat(data)) stop(paste(deparse(substitute((data))),"is an unprojected map.\n This function use planar coordinates to calculate areas and thus does not give correct answers for longitude/latitude data:\n => Use \"st_transform()\" to transform longitude/latitude coordinates to another coordinate system."))
+  if (sf::st_is_longlat(data)) stop(paste0("(", original_name,") ","is an unprojected map.\n This function use planar coordinates to calculate areas and thus does not give correct answers for longitude/latitude data:\n => Use \"st_transform()\" to transform longitude/latitude coordinates to another coordinate system."))
 }
 n_reg <- nrow(data)
 y_geom <- sf::st_geometry(data)
@@ -103,6 +104,34 @@ if (!is.numeric(countVar) || any(countVar<0) || any(is.na(countVar)))
             y_geom <- check_ring_dir(y_geom, currentoptions$check.only)
         }
     }
+    if (currentoptions$check.duplicated) {
+      for (l3 in 1:length(y_geom)) {
+        if (inherits(y_geom[[l3]], "MULTIPOLYGON")) {
+          for (l2 in 1:length(y_geom[[l3]])) {
+            for (l1 in 1:length(y_geom[[l3]][[l2]])) {
+              prov <- unique(y_geom[[l3]][[l2]][[l1]])
+              if ((nrow(prov)+1) != nrow(y_geom[[l3]][[l2]][[l1]])) {
+                warning(paste0("duplicated points in (region/multipolygon:", l3, ", polygon:", l2, ", ext/hole:", l1,")"))
+                y_geom[[l3]][[l2]][[l1]] <-
+                  rbind(prov,
+                      y_geom[[l3]][[l2]][[l1]][1,])
+              }
+            }
+          }
+        } else {
+          for (l2 in 1:length(y_geom[[l3]])) {
+               prov <- unique(y_geom[[l3]][[l2]])
+              if ((nrow(prov)+1) != nrow(y_geom[[l3]][[l2]])) {
+                 warning(paste0("duplicated points in region/polygon", l3, ", ext/hole", l2,")"))
+               y_geom[[l3]][[l2]] <-
+                  rbind(unique(y_geom[[l3]][[l2]]),
+                    y_geom[[l3]][[l2]][1,])
+              }
+          }
+        }
+      }
+      st_geometry(data) <- y_geom
+    }
     centers <- unlist(lapply(y_geom, currentoptions$center))
     centersx <- centers[seq(1, n_reg*2 - 1, by=2)]
     centersy <- centers[seq(2, n_reg*2, by=2)]
@@ -118,15 +147,34 @@ if (method=="dcn") {
     nx <- length(x)
     return(rep(x[nx],nx)) }
   coord[,":="("rdup"=fperm(index), "rlast"=flast(index)),by=list(X,Y)]
-  paramsint <- currentoptions$paramsint
+  coord[,L2:=cumsum(ifelse(c(0, diff(L2-1))==1,1,0)) + L3]
+  debutspol <- c(coord[,index[1], L2]$V1, nrow(coord))
+  debuts <- c(coord[,index[1], L3]$V1, nrow(coord))
+  debutsp <- coord[,L2[1],L3]$V1 - 1
+  mynp <- coord[nrow(coord), L2]
+  paramsint <- c(currentoptions$paramsint, mynp)
   paramsdouble <- currentoptions$paramsdouble
   options <- currentoptions$paramsint
   results <- .Call(carto_dcn, y_geom, coord[,X], coord[,Y],
                    trimCountVar, as.integer(coord[,L1]),
-                   as.integer(coord[,L2]), as.integer(coord[,L3]),
+                   as.integer(coord[,L2]),
+                   as.integer(coord[,L3]),
                    as.integer(coord[,rdup]),
-                   as.integer(coord[,rlast]), as.integer(paramsint), paramsdouble, as.integer(currentoptions$option) )
+                   as.integer(coord[,rlast]), as.integer(paramsint), paramsdouble, as.integer(currentoptions$option),
+                   as.integer(debuts), as.integer(debutsp), as.integer(debutspol))
+  actualcrit <- results[[6]]
+  results <- results[-6]
+  for (i in 2:5) results[[i]] <- results[[i]][1:n_reg]
   names(results) <- c("cartogram","orig_area","final_area","orig_centers","final_centers")
+  # warn
+  convallcrit <- mapply(">", actualcrit, currentoptions$paramsdouble[1:2])
+  if (all(convallcrit)) {
+    converged <- FALSE
+  } else {
+    converged <- TRUE
+  }
+  strwarn <- paste("criterion convergence not met. If the result does not satisfy your needs, please\n  - increase verbosity level (to understand the problem),\n  - increase maxit,\n  - increase",
+                   ifelse(convallcrit[1], "maxrelError", ""), ifelse(all(convallcrit), "and", ""), ifelse(convallcrit[2], "maxrelTol", ""), "\n  in options of cartogramR()")
 } else {
     niveaux <- 1:n_reg
     ff <- factor(niveaux, levels=niveaux)
@@ -152,35 +200,51 @@ if (method=="dcn") {
               bbox, currentoptions$paramsdouble, as.integer(currentoptions$paramsint),
               as.integer(currentoptions$options), as.integer(multipolygons), PACKAGE="cartogramR")
     if (currentoptions$options["gridexport"]) {
+      actualcrit <- results[[6]]
+      results <- results[-6]
       names(results) <- c("cartogram","orig_area","final_area","orig_centers","final_centers","gridx","gridy")
-      } else {
-        results <- results[-(6:7)]
-        names(results) <- c("cartogram","orig_area","final_area","orig_centers","final_centers")
-        }
+    } else {
+      actualcrit <- results[[6]]
+      results <- results[-c(6:8)]
+      names(results) <- c("cartogram","orig_area","final_area","orig_centers","final_centers", "error")
     }
+    # warn
+    strwarn <- paste("criterion convergence not met. If the result does not satisfy your needs, please\n  - increase verbosity level (to understand the problem),\n  - increase L,\n  - increase", ifelse(currentoptions$options["absrel"],"relerror","abserror"),
+                                    "\n  in options of cartogramR()")
+    if (actualcrit>currentoptions$paramsdouble[1]) {
+      converged <- FALSE
+    } else {
+      converged <- TRUE
+    }
+ }
     ## make an sf object of results$cartogram
-    namevarall <- names(data)
-    namegeom <- attr(data, "sf_column")
-    namesvar <- namevarall[namevarall!=namegeom]
-    dataonly <- data.frame(data)[,namesvar]
-    target_area <- trimCountVar/sum(trimCountVar)*sum(results$orig_area)
-    y <- cbind.data.frame(dataonly, results$orig_area, results$final_area, target_area)
-    names(y)[(ncol(y)-2):ncol(y)] <- c("orig_area", "final_area", "target_area")
-    y <- sf::st_as_sf(cbind.data.frame(y,  geometry=results$cartogram))
-    results$cartogram <- y
-    ## add centers as sf points
-    y <- st_multipoint(
-      matrix(c(results$orig_centers, results$final_centers), ncol=2), dim = "XY")
-    results$final_centers <- sf::st_sfc(y, crs = sf::st_crs(data))
-    y <- st_multipoint(matrix(centers, ncol=2, byrow=TRUE), dim = "XY")
-    results$orig_centers <- sf::st_sfc(y, crs = sf::st_crs(data))
-    algo <- switch(method, "gsm"= "Gastner, Seguy & More (2018) fast flow-based algorithm", "gn"="Gastner & Newman (2004) diffusion algorithm", "dcn" = "Dougenik, Chrisman &  Niemeyer (1985) rubber band algorithm")
-    attr(results, "initial_data_name") <- deparse(substitute(data))
-    attr(results, "initial_count_name") <- count
-    attr(results, "method") <- method
-    attr(results, "algorithm") <- algo
-    attr(results, "initial_bbox") <- sf::st_bbox(data)
-    attr(results, "options") <- currentoptions
-    class(results) <- c("cartogramR", "list")
-    return(results)
+  namevarall <- names(data)
+  namegeom <- attr(data, "sf_column")
+  namesvar <- namevarall[namevarall!=namegeom]
+  dataonly <- data.frame(data)[,namesvar]
+  target_area <- trimCountVar/sum(trimCountVar)*sum(results$orig_area)
+  y <- cbind.data.frame(dataonly, results$orig_area, results$final_area, target_area)
+  names(y)[(ncol(y)-2):ncol(y)] <- c("orig_area", "final_area", "target_area")
+  y <- sf::st_as_sf(cbind.data.frame(y,  geometry=results$cartogram))
+  results$cartogram <- y
+  ## add centers as sf points
+  y <- st_multipoint(
+    matrix(c(results$orig_centers, results$final_centers), ncol=2), dim = "XY")
+  results$final_centers <- sf::st_sfc(y, crs = sf::st_crs(data))
+  y <- st_multipoint(matrix(centers, ncol=2, byrow=TRUE), dim = "XY")
+  results$orig_centers <- sf::st_sfc(y, crs = sf::st_crs(data))
+  ## warning ?
+  if (!converged) warning(strwarn)
+  currentoptions <- c(currentoptions, converged=converged)
+
+  ## algo and attributes
+  algo <- switch(method, "gsm"= "Gastner, Seguy & More (2018) fast flow-based algorithm", "gn"="Gastner & Newman (2004) diffusion algorithm", "dcn" = "Dougenik, Chrisman &  Niemeyer (1985) rubber band algorithm")
+  attr(results, "initial_data_name") <- original_name
+  attr(results, "initial_count_name") <- count
+  attr(results, "method") <- method
+  attr(results, "algorithm") <- algo
+  attr(results, "initial_bbox") <- sf::st_bbox(data)
+  attr(results, "options") <- currentoptions
+  class(results) <- c("cartogramR", "list")
+  return(results)
  }

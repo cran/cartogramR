@@ -29,7 +29,7 @@ void inv_rescale_map (double* centroidx, double* centroidy, int* n_polycorn, int
     ly = 1 << ((int)ceil(log2((new_maxy-new_miny)/latt_const)));
     new_maxy = 0.5*(map_maxy+map_miny) + 0.5*ly*latt_const;
     new_miny = 0.5*(map_maxy+map_miny) - 0.5*ly*latt_const;
-  }
+  } /*  */
   else {
     ly = L;
     latt_const = (new_maxy-new_miny) / L;
@@ -41,7 +41,7 @@ void inv_rescale_map (double* centroidx, double* centroidy, int* n_polycorn, int
 	 lx, ly, new_minx, new_miny, new_maxx, new_maxy);
 
   /********************* Rescale all polygon coordinates. ********************/
- if (options[0]>1) Rprintf("Rescaling polygon coordinates with %f.\n",
+ if (options[0]>1) Rprintf("Rescaling (to original scale) polygon coordinates with %f.\n",
 	 latt_const);
 
 

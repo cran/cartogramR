@@ -25,6 +25,10 @@
 #include <stdlib.h>
 #include <math.h>
 #include <string.h>
+#include "myomp.h"
+#if defined(R_SIGACTION) ||  defined(R_SIGWIN)
+#include <signal.h>
+#endif
 #include "cartogram.h"
 
 /******************************** Definitions. *******************************/
@@ -42,7 +46,7 @@ fftw_plan plan_grid_fluxx_init, plan_grid_fluxy_init;
 /**************************** Function prototypes. ***************************/
 
 void init_gridv (void);
-void ffb_calcv (double t);
+void ffb_calcv (double t, int nthreads);
 
 /*****************************************************************************/
 /* Function to initialize the Fourier transforms of gridvx[] and gridvy[] at */
@@ -101,12 +105,13 @@ void init_gridv (void)
 /* Function to calculate the velocity at the grid points (x, y) with x =     */
 /* 0.5, 1.5, ..., lx-0.5 and y = 0.5, 1.5, ..., ly-0.5 at time t.            */
 
-void ffb_calcv (double t)
+void ffb_calcv (double t, int nthreads)
 {
   double rho;
   int k;
   
-/* #pragma omp parallel for private(rho) */
+if (nthreads == -1) nthreads= omp_get_num_procs() ;
+#pragma omp parallel for private(rho) num_threads(nthreads) if (nthreads>1)
   for (k=0; k<lx*ly; k++) {
     rho = rho_ft[0] + (1.0-t) * (rho_init[k] - rho_ft[0]);
     gridvx[k] = -grid_fluxx_init[k] / rho;
@@ -129,7 +134,8 @@ void ffb_calcv (double t)
 /* all the way to the edge (i.e. the slope is 0 consistent with a cosine     */
 /* transform).                                                               */
 
-double interpol (double x, double y, double *grid, char zero, int* options, int* error_ptr)
+double interpol (double x, double y, double *grid, char zero,
+                 int* options, int* error_ptr)
 {
   double delta_x, delta_y, fx0y0, fx0y1, fx1y0, fx1y1, x0, x1, y0, y1;
  if (x<0 || x>lx || y<0 || y>ly) {
@@ -202,15 +208,38 @@ double interpol (double x, double y, double *grid, char zero, int* options, int*
 /*****************************************************************************/
 /* Function to integrate the equations of motion with the fast flow-based    */
 /* method.                                                                   */
+#if defined(R_SIGACTION) || defined(R_SIGWIN)
+static  volatile sig_atomic_t keep_running = 1;
+static void intHandler(int _) {
+   (void)_;
+    keep_running = 0;
+}
+#endif
 
 void ffb_integrate (int* options, int* error_ptr)
 {
   Rboolean accept;
   double delta_t, t, *vx_intp, *vx_intp_half, *vy_intp, *vy_intp_half;
-  int iter, k, errorloc;
+  int iter, k, errorloc, nthreads;
   POINT *eul, *mid;
 
   errorloc=error_ptr[0];
+  nthreads=options[6];
+  /* signals */
+#if defined(R_SIGACTION)
+  keep_running=1;
+  struct sigaction act;
+  act.sa_handler = intHandler;
+  sigemptyset(&act.sa_mask);
+  act.sa_flags = 0;
+  sigaction(SIGINT, &act, NULL);
+#elif defined(R_SIGWIN)
+  keep_running=1;
+  signal(SIGINT, intHandler);
+#else
+  int keep_running=1;
+#endif
+
   /****************** Allocate memory for the velocity grid. *****************/
   
   gridvx = (double*) malloc(lx * ly * sizeof(double));
@@ -263,10 +292,12 @@ void ffb_integrate (int* options, int* error_ptr)
   /******************************** Integrate. *******************************/
   
   do {
-    ffb_calcv(t);
-    /* #pragma omp parallel for */
-#pragma omp parallel shared(errorloc)
-#pragma omp for    nowait reduction(max : errorloc)
+    ffb_calcv(t, nthreads);
+if (nthreads == -1) nthreads= omp_get_num_procs() ;
+#pragma omp parallel for \
+  reduction(max : errorloc)  \
+  num_threads(nthreads) \
+  if (nthreads>1)
     for (k=0; k<lx*ly; k++) {
       
       /* We know, either because of the initialization or because of the     */
@@ -298,7 +329,8 @@ void ffb_integrate (int* options, int* error_ptr)
     while (!accept) {
       
       /* Simple Euler step. */
-     /* #pragma omp parallel for */
+      if (nthreads == -1) nthreads= omp_get_num_procs() ;
+    #pragma omp parallel for num_threads(nthreads) if (nthreads>1)
       for (k=0; k<lx*ly; k++) {
       	eul[k].x = proj[k].x + vx_intp[k] * delta_t;
       	eul[k].y = proj[k].y + vy_intp[k] * delta_t;
@@ -310,7 +342,7 @@ void ffb_integrate (int* options, int* error_ptr)
       /*                        t + 0.5*delta_t)                             */
       /* and similarly for y.                                                */
       
-      ffb_calcv(t + 0.5*delta_t);
+      ffb_calcv(t + 0.5*delta_t, nthreads);
       
       /* Make sure we do not pass a point outside [0, lx] x [0, ly] to       */
       /* interpol(). Otherwise decrease the time step below and try again.   */
@@ -329,8 +361,11 @@ void ffb_integrate (int* options, int* error_ptr)
 	
       	/* OK, we can run interpol(). */
 	
-#pragma omp parallel shared(errorloc)
-#pragma omp for    nowait reduction(max : errorloc)
+    if (nthreads == -1) nthreads= omp_get_num_procs() ;
+#pragma omp parallel for \
+ reduction(max : errorloc)\
+   num_threads(nthreads) \
+  if (nthreads>1)
         for (k=0; k<lx*ly; k++) {
       	  vx_intp_half[k] = interpol(proj[k].x + 0.5*delta_t*vx_intp[k],
 				     proj[k].y + 0.5*delta_t*vy_intp[k],
@@ -378,23 +413,31 @@ void ffb_integrate (int* options, int* error_ptr)
     /* Control output. */
     
     if (options[0]>1) if (iter % 10 == 0) Rprintf("iter = %d, t = %e, delta_t = %e\n", iter, t, delta_t);
-    if (iter > options[4]) {
-      if (options[0]>1) Rprintf("Number of iterations > maxit_internal:\n exiting ffb_integrate too early\n");
-	        /* Free memory. */
-          fftw_destroy_plan(plan_grid_fluxx_init);
-          fftw_destroy_plan(plan_grid_fluxy_init);
-          free(gridvx);
-          free(gridvy);
-          fftw_free(grid_fluxx_init);
-          fftw_free(grid_fluxy_init);
-          free(eul);
-          free(mid);
-          free(vx_intp);
-          free(vy_intp);
-          free(vx_intp_half);
-          free(vy_intp_half);
-          error_ptr[0]=4;
-          return ;
+    if ((iter > options[4])|| (log10(delta_t)< (- options[5]))) {
+      if (iter > options[4]) {
+        if (options[0]>0)
+          Rprintf("Number of iterations > maxit_internal:\n exiting ffb_integrate too early\n");
+      }
+      if (log10(delta_t)< (- options[5])) {
+        if (options[0]>0)
+          Rprintf("Delta_t too small:\n exiting ffb_integrate too early\n");
+     }
+      /* Free memory. */
+      fftw_destroy_plan(plan_grid_fluxx_init);
+      fftw_destroy_plan(plan_grid_fluxy_init);
+      free(gridvx);
+      free(gridvy);
+      fftw_free(grid_fluxx_init);
+      fftw_free(grid_fluxy_init);
+      free(eul);
+      free(mid);
+      free(vx_intp);
+      free(vy_intp);
+      free(vx_intp_half);
+      free(vy_intp_half);
+      if (iter > options[4])  error_ptr[0]=4;
+      if (log10(delta_t)< (- options[5]))  error_ptr[0]=5;
+      return ;
     }
     /* When we get here, the integration step was accepted. */
     
@@ -406,7 +449,7 @@ void ffb_integrate (int* options, int* error_ptr)
     }
     delta_t *= INC_AFTER_ACC;           /* Try a larger step size next time. */
     
-  } while (t < 1.0);
+  } while ((t < 1.0 ) && (keep_running));
   
   /* Free memory. */
   
@@ -422,6 +465,7 @@ void ffb_integrate (int* options, int* error_ptr)
   free(vy_intp);
   free(vx_intp_half);
   free(vy_intp_half);
-  
+  /* signal error */
+  if (!keep_running) error_ptr[0]=6;
   return;
 }

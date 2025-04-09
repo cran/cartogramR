@@ -17,6 +17,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <math.h> /* for log2 and pow */
 #include <Rmath.h> /* for fmin2 */
 #include <R.h>
 #include <Rinternals.h>
@@ -35,18 +36,22 @@
  * \param rparamsint Integer vector of integer parameters
  * \param roptions Integer vector of options
  *  - roptions[0]>0 verbose mode
- *  - roptions[1]>0 alors diff=TRUE
+ *  - roptions[1]>0 then diff=TRUE
  *  - roptions[2]>0 gridexport=TRUE
  *  - roptions[3]>0 absrel= TRUE; else absrel = FALSE;
- *  - roptions[4]=3000 max int iter in ffb_integrate or diff_integrate;
+ *  - roptions[4]=n at max n iter in ffb_integrate or diff_integrate;
+ *  - roptions[5]=n delta_t must be greater than 10^-n in ffb_integrate
+ *                   or diff_integrate;
+ *  - roptions[6]=n, number of threads
  * \return rans a R list
  * [[1]] rygeom the sf object (aka the cartogram)
  * [[2]] original area
  * [[3]] final area
  * [[4]] final x-coordinates of centroids
  * [[5]] final y-coordinates of centroids
- * [[6]] grid x matrix (optionnal)
- * [[7]] grid y matrix (optionnal)
+ * [[6]] criterion at the end of algorithm
+ * [[7]] grid x matrix (optionnal)
+ * [[8]] grid y matrix (optionnal)
  ******************************---------------------------- */
 
 /*------------------------ Global variables. ----------------------*/
@@ -54,9 +59,10 @@ int L;
 double MAX_PERMITTED_AREA_ERROR, MIN_POP_FAC, PADDING, BLUR_WIDTH;
 /* Variables for map. */
 double *area_err, *cart_area, map_maxx, map_maxy, map_minx, map_miny,
-  *target_area, *bbox, *coordvertices;
+  *centroidxold, *centroidyold, *target_area, *bbox, *coordvertices;
 int max_id, min_id, n_poly, *n_polyinreg, n_reg, **polyinreg;
-POINT **cartcorn, **origcorn, **polycorn, *proj, *proj2, *proj3, *projinit, *projtmp;
+POINT **cartcorn, **origcorn, **polycorn, **polycornold,
+  *proj, *proj2, *proj3;
 size_t projsize;
 /* Variables for digitizing the density. */
 double *rho_ft, *rho_init;
@@ -72,13 +78,18 @@ typedef struct {
   double *rho_ft;
   double *rho_init;
   POINT  **polycorn;
+  POINT  **polycornold;
   POINT **cartcorn;
   int  **polyinreg;
   int  *n_polyinreg;
   POINT  *projinit;
   POINT  *proj;
+  POINT  *projold;
   POINT  *proj2;
   POINT *proj3;
+  POINT *proj3old;
+  double  *centroidxold;
+  double  *centroidyold;
   double  *target_area;
   double *area_err;
   double *cart_area;
@@ -93,6 +104,8 @@ static void cartogramR_cleanup(void *data) {
   fftw_free(pdata->rho_init);
   for (i=0; i<pdata->n_poly; i++) free(pdata->polycorn[i]);
   free(pdata->polycorn);
+  for (i=0; i<pdata->n_poly; i++) free(pdata->polycornold[i]);
+  free(pdata->polycornold);
   for (i=0; i<pdata->n_poly; i++) free(pdata->cartcorn[i]);
   free(pdata->cartcorn);
   for (i=0; i<pdata->n_reg; i++) free(pdata->polyinreg[i]);
@@ -100,8 +113,12 @@ static void cartogramR_cleanup(void *data) {
   free(pdata->n_polyinreg);
   free(pdata->projinit);
   free(pdata->proj);
+  free(pdata->projold);
   free(pdata->proj2);
   free(pdata->proj3);
+  free(pdata->proj3old);
+  free(pdata->centroidxold);
+  free(pdata->centroidyold);
   free(pdata->target_area);
   free(pdata->area_err);
   free(pdata->cart_area);
@@ -190,7 +207,8 @@ SEXP cartogramR (SEXP rcentroidx, SEXP rcentroidy, SEXP rygeomd,
   /* local variables */
   /*-----------------------------------------------------------*/
   Rboolean diff, gridexport, absrel;
-  double  curcrit, cart_tot_area, correction_factor=1.0, init_tot_area, scale_map;
+  double  curcrit, cart_tot_area, correction_factor=1.0,
+    init_tot_area, scale_map= 1.0;
   int i, integration, j;
   /* process options */
   if (options[1]>0)   diff = TRUE; else diff = FALSE;
@@ -208,7 +226,7 @@ SEXP cartogramR (SEXP rcentroidx, SEXP rcentroidy, SEXP rygeomd,
   /* [[7]] grid y matrix */
   /*------------------------------------------------------------*/
   SEXP rans;
-    rans = PROTECT(allocVector(VECSXP, 7));
+  rans = PROTECT(allocVector(VECSXP, 8));
   SEXP rfinal_area, roriginal_area;
   roriginal_area = PROTECT(allocVector(REALSXP, n_reg));
   rfinal_area = PROTECT(allocVector(REALSXP, n_reg));
@@ -218,7 +236,7 @@ SEXP cartogramR (SEXP rcentroidx, SEXP rcentroidy, SEXP rygeomd,
   /*-------------------------------------------------------------*/
   /* Read polygon from R list to n_polycorn (and assign memory)*/
   /*-------------------------------------------------------------*/
-  int jj,k, nbinpoly, nbvert, nblistmulti, ctrpoly=0;
+  int jj,k, nbinpoly, nbvert, nblistmulti, ctrpoly=0, centroidsize=0;
 
   /* allocation step 1*/
   polycorn = (POINT**) malloc(nbpoly * sizeof(POINT*));
@@ -287,18 +305,27 @@ SEXP cartogramR (SEXP rcentroidx, SEXP rcentroidy, SEXP rygeomd,
   /*-------------------------------------------------------------------*/
   /* Allocate memory for the projected positions. */
   /*-------------------------------------------------------------------*/
+  POINT *projold, *proj3old, *projinit;
   projsize = lx * ly * sizeof(POINT);
   proj = (POINT*) malloc(projsize);
+  projold = (POINT*) malloc(projsize);
   proj2 = (POINT*) malloc(projsize);
   projinit = (POINT*) malloc(projsize);
   proj3 = (POINT*) malloc(projsize);
+  proj3old = (POINT*) malloc(projsize);
   cartcorn = (POINT**) malloc(n_poly * sizeof(POINT*));
-  for (i=0; i<n_poly; i++)
+  polycornold = (POINT**) malloc(n_poly * sizeof(POINT*));
+  for (i=0; i<n_poly; i++) {
     cartcorn[i] = (POINT*) malloc(n_polycorn[i] * sizeof(POINT));
-  area_err = (double*) malloc(n_reg * sizeof(double));
-  cart_area = (double*) malloc(n_reg * sizeof(double));
+    polycornold[i] = (POINT*) malloc(n_polycorn[i] * sizeof(POINT));
+  }
+  centroidsize= n_reg *  sizeof(double);
+  centroidxold = (double*) malloc(centroidsize);
+  centroidyold = (double*) malloc(centroidsize);
+  area_err = (double*) malloc(centroidsize);
+  cart_area = (double*) malloc(centroidsize);
   /*-------------------------------------------------------------------*/
-  /* Allocate struct */
+  /* Allocate struct and call on exit*/
   /*-------------------------------------------------------------------*/
   cartostruct *datastruct_ptr = malloc(sizeof(cartostruct));
   datastruct_ptr->plan_fwd = plan_fwd;
@@ -307,13 +334,18 @@ SEXP cartogramR (SEXP rcentroidx, SEXP rcentroidy, SEXP rygeomd,
   datastruct_ptr->rho_ft = rho_ft;
   datastruct_ptr->rho_init = rho_init;
   datastruct_ptr->polycorn = polycorn;
+  datastruct_ptr->polycornold = polycornold;
   datastruct_ptr->cartcorn = cartcorn;
   datastruct_ptr->polyinreg = polyinreg;
   datastruct_ptr->n_polyinreg = n_polyinreg;
   datastruct_ptr->projinit = projinit;
   datastruct_ptr->proj = proj;
+  datastruct_ptr->projold = projold;
   datastruct_ptr->proj2 = proj2;
   datastruct_ptr->proj3 = proj3;
+  datastruct_ptr->proj3old = proj3old;
+  datastruct_ptr->centroidxold = centroidxold;
+  datastruct_ptr->centroidyold = centroidyold;
   datastruct_ptr->target_area = target_area;
   datastruct_ptr->area_err = area_err;
   datastruct_ptr->cart_area = cart_area;
@@ -321,17 +353,14 @@ SEXP cartogramR (SEXP rcentroidx, SEXP rcentroidy, SEXP rygeomd,
   /*-------------------------------------------------------------------*/
   /* Are we already at final point ?  */
   /*-------------------------------------------------------------------*/
+  if (options[0]>1) Rprintf("Objective: max (abs.) area error: %f\n", MAX_PERMITTED_AREA_ERROR);
   if (absrel) {
     curcrit=max_area_err(area_err, cart_area, n_polycorn, polycorn, &init_tot_area);
   } else {
     /* the first time we need to rescale the abserror criterion on cartogram scale */
     scale_map = scale_map_factor();
-    if (options[0]>1) Rprintf("initial max permitted area error: %f\n", MAX_PERMITTED_AREA_ERROR);
     if (options[0]>1) Rprintf("scale map: %f\n", scale_map);
     MAX_PERMITTED_AREA_ERROR /= (scale_map * scale_map);
-    if (options[0]>1) Rprintf("------------------------------------------------------------------\n");
-    if (options[0]>1) Rprintf("rescale max permitted area error: %f <- target to reach\n", MAX_PERMITTED_AREA_ERROR);
-    if (options[0]>1) Rprintf("------------------------------------------------------------------\n");
     curcrit = max_absarea_err(area_err, cart_area, n_polycorn, polycorn, &init_tot_area);
   }
   if (curcrit <= MAX_PERMITTED_AREA_ERROR) {
@@ -364,15 +393,14 @@ SEXP cartogramR (SEXP rcentroidx, SEXP rcentroidy, SEXP rygeomd,
       ransx = PROTECT(allocMatrix(REALSXP, 1, 1));
       ransy = PROTECT(allocMatrix(REALSXP, 1, 1));
     }
-    SET_VECTOR_ELT(rans, 5, ransx);
-    SET_VECTOR_ELT(rans, 6, ransy);
+    SET_VECTOR_ELT(rans, 6, ransx);
+    SET_VECTOR_ELT(rans, 7, ransy);
     /*--------------------------------------------------------------
      * export polycorn (ugly global variable) to rygeom an R sf list
      * four  steps
      ----------------------------------------------------------------*/
     /* first return to the original scale */
     inv_rescale_map (centroidx, centroidy, n_polycorn, options);
-    /* second: export centroid */
     SET_VECTOR_ELT(rans, 3, rcentroidx2);
     SET_VECTOR_ELT(rans, 4, rcentroidy2);
 
@@ -467,15 +495,23 @@ SEXP cartogramR (SEXP rcentroidx, SEXP rcentroidy, SEXP rygeomd,
                                       polycorn[polyinreg[i][j]]);
     }
     SET_VECTOR_ELT(rans, 2, rfinal_area);
+    if (!absrel)  {
+      curcrit=curcrit*scale_map * scale_map;
+    }
+    SET_VECTOR_ELT(rans, 5, ScalarReal(curcrit));
+
     /*------------------------- end export------------------------*/
-    Rprintf("max. rel. area error: %f\n", curcrit);
+    if(options[0]>0) {
+      if (absrel) Rprintf("max. rel. area error: %f\n", curcrit);
+      else Rprintf("max. abs. area error: %f\n", curcrit);
+    }
     warning("at the beginning of the program, we are already at the end, exiting...");
   } else {
     /* -------------------------------------------------------- */
     /*  the program starts */
     /* -------------------------------------------------------- */
     /* proj[i*ly+j] will store the current position of the point that started  */
-    /* at (i+0.5, j+0.5).                                                      */
+    /* at (i+0.5, j+0.5). */
     for (i = 0; i < lx; i++) {
       for (j = 0; j < ly; j++) {
         projinit[i * ly + j].x = i + 0.5;
@@ -484,18 +520,18 @@ SEXP cartogramR (SEXP rcentroidx, SEXP rcentroidy, SEXP rygeomd,
     }
     memcpy(proj, projinit, projsize);
     memcpy(proj3, projinit, projsize);
-    for (i=0; i<lx; i++)
-      for (j=0; j<ly; j++) {
-        proj[i*ly + j].x = i + 0.5;
-        proj[i*ly + j].y = j + 0.5;
-        proj3[i*ly + j].x = i + 0.5;
-        proj3[i*ly + j].y = j + 0.5;
-      }
+    /* for (i=0; i<lx; i++) */
+    /*   for (j=0; j<ly; j++) { */
+    /*     proj[i*ly + j].x = i + 0.5; */
+    /*     proj[i*ly + j].y = j + 0.5; */
+    /*     proj3[i*ly + j].x = i + 0.5; */
+    /*     proj3[i*ly + j].y = j + 0.5; */
+    /*   } */
 
     /* -------------------------------------------------------- */
     /* ------- First integration of the equations of motion.    */
     /* -------------------------------------------------------- */
-    if (options[0]>0) Rprintf("Starting iteration 1 ");
+    if (options[0]>0) Rprintf("Starting first pass ");
     if (options[0]>1) Rprintf("\n");
     if (!diff)
       ffb_integrate(options, &errorloc);
@@ -508,10 +544,58 @@ SEXP cartogramR (SEXP rcentroidx, SEXP rcentroidy, SEXP rygeomd,
       /*---------- Unprotect. ----------------*/
       UNPROTECT(16);
       UNPROTECT(3); /* rygeom + rcentroidx2 + rcentroidy2*/
-        if (errorloc==4) {
-           Rprintf("increase maxit_internal or decreases the objective\n");
+      /* error internal loop does not succeed */
+        if ((errorloc==4)&&(options[0]>0)) {
+          if (options[3]>0) {
+            Rprintf("- increase maxit_internal (risky).\n");
+            Rprintf("  Atm, options=list(maxit_internal=%d)\n",options[4]);
+            Rprintf("       or\n");
+            Rprintf("- increase the relative objective (safe).\n");
+            Rprintf("  Atm options=list(absrel=TRUE, relerror=%.5g)\n", paramsdouble[0]);
+            Rprintf("       or\n");
+            Rprintf("- increase the size of the grid (safe but increase calculation time).\n");
+            Rprintf("  Atm options=list(L=%d)\n", L);
+          } else {
+            Rprintf("- increase maxit_internal (risky).\n");
+            Rprintf("  Atm, options=list(maxit_internal=%d)\n",options[4]);
+            Rprintf("       or\n");
+            Rprintf("- increase the absolute objective (safe).\n");
+            Rprintf("  Atm options=list(absrel=FALSE, relerror=%.5g)\n", paramsdouble[0]);
+            Rprintf("       or\n");
+            Rprintf("- increase the size of the grid (safe but increase calculation time).\n");
+            Rprintf("  Atm options=list(L=%d)\n", L);
+          }
         }
-      error("error in ffb_integrate/diff_integrate");
+        if  ((errorloc==5)&&(options[0]>0)) {
+          if (options[3]>0) {
+            Rprintf("- decrease min_deltat (risky).\n");
+            Rprintf("  Atm, options=list(min_deltat=1e-%d)\n",options[5]);
+            Rprintf("       or\n");
+            Rprintf("- increase the relative objective (safe).\n");
+            Rprintf("  Atm options=list(absrel=TRUE, relerror=%.5g)\n", paramsdouble[0]);
+            Rprintf("       or\n");
+            Rprintf("- increase the size of the grid (safe but increase calculation time).\n");
+            Rprintf("  Atm options=list(L=%d)\n", L);
+          }  else {
+            Rprintf("- decrease min_deltat (risky).\n");
+            Rprintf("  Atm, options=list(min_deltat=1e-%d)\n",options[5]);
+            Rprintf("       or\n");
+            Rprintf("- increase the absolute objective (safe).\n");
+            Rprintf("  Atm options=list(absrel=FALSE, relerror=%.5g)\n", paramsdouble[0]);
+            Rprintf("       or\n");
+            Rprintf("- increase the size of the grid (safe but increase calculation time).\n");
+            Rprintf("  Atm options=list(L=%d)\n", L);
+        }
+        }
+        if ((errorloc==4)||(errorloc==5)) {
+        if (absrel)
+          error("algorithm failed at first pass,\n  last relative criterion reached=%.7g", curcrit);
+        else
+          error("algorithm failed at first pass,\n  last absolute criterion reached=%.7g", curcrit * scale_map * scale_map);
+        } else {
+          if (errorloc==6) error("User interruption");
+          else error("number (%d)", errorloc);
+        }
       return R_NilValue;
     }
     project(centroidx, centroidy, FALSE, options, &errorloc, n_polycorn, gridexport);  /* FALSE because we do not need to project the graticule. */
@@ -533,58 +617,118 @@ SEXP cartogramR (SEXP rcentroidx, SEXP rcentroidy, SEXP rygeomd,
     } else {
       curcrit = max_absarea_err(area_err, cart_area, n_polycorn,
                                 cartcorn, &cart_tot_area);
-      if (options[0]>0) Rprintf("max. abs. area error: %f\n", curcrit);
+      if (options[0]>0) Rprintf("max. abs. area error: %f\n", curcrit * scale_map * scale_map);
     }
-
     /* -------------------------------------------------------- */
     /* Additional integrations to come closer to target areas.*/
     /* -------------------------------------------------------- */
     integration = 1;
     while (curcrit > MAX_PERMITTED_AREA_ERROR && integration<maxit) {
-      if (options[0]>2) Rprintf("max iteration: %d\n", maxit);
+      if (options[0]>2) Rprintf("max iteration allowed: %d\n", maxit-1);
       R_CheckUserInterrupt();
-      fill_with_density2(n_polycorn);
+      fill_with_density2(n_polycorn, options);
 
       /* Copy the current graticule before resetting. We will construct the    */
       /* final graticule by interpolating proj2 on the basis of proj.          */
 
-      projtmp = proj2;
-      proj2 = proj;
-      proj = projtmp;
+      memcpy(proj2, projinit, projsize);
       memcpy(proj, projinit, projsize);
- /* for (i=0; i<lx; i++) */
- /*        for (j=0; j<ly; j++) { */
- /*          proj2[i*ly + j].x = proj[i*ly + j].x; */
- /*          proj2[i*ly + j].y = proj[i*ly + j].y; */
- /*        } */
- /*      for (i=0; i<lx; i++) */
- /*        for (j=0; j<ly; j++) { */
- /*          proj[i*ly + j].x = i + 0.5; */
- /*          proj[i*ly + j].y = j + 0.5; */
- /*        } */
       integration++;
-      if (options[0]>0) Rprintf("Starting iteration %d ", integration);
+      if ((options[0]>0) && (integration==2)) Rprintf("Starting second pass: additional integrations to come closer to target areas\n");
+      if (options[0]>0) Rprintf("Starting iteration %d ", integration-1);
       if (options[0]>1) Rprintf("\n");
       if (!diff)
         ffb_integrate(options, &errorloc);
       else
         diff_integrate(options, &errorloc);
-      if (errorloc>0) {
-        /* ------- free memory on error ------- */
-        /* FREEG1 ; */
-        /* done since 1.2-0 by cleancall */
-        /*---------- Unprotect. ----------------*/
-        UNPROTECT(16);
-        UNPROTECT(3); /* rygeom + rcentroidx2 + rcentroidy2*/
-        if (errorloc==4) {
-           Rprintf("increase maxit_internal or decreases the objective\n");
+    if (errorloc==5) {
+      /* delta_t too small we return last clean result */
+        if  (options[0]>0) {
+          if (options[3]>0) {
+            Rprintf("- decrease min_deltat (risky).\n");
+            Rprintf("  Atm, options=list(min_deltat=1e-%d)\n",options[5]);
+            Rprintf("       or\n");
+            Rprintf("- increase the relative objective (safe).\n");
+            Rprintf("  Atm options=list(absrel=TRUE, relerror=%.5g)\n", paramsdouble[0]);
+            Rprintf("       or\n");
+            Rprintf("- increase the size of the grid (safe but increase calculation time).\n");
+            Rprintf("  Atm options=list(L=%d)\n", L);
+            i=(int) pow(2, ((int) log2((double) L))+1);
+            Rprintf("  next possible value is: %d\n", i);
+          }  else {
+            Rprintf("- decrease min_deltat (risky).\n");
+            Rprintf("  Atm, options=list(min_deltat=1e-%d)\n",options[5]);
+            Rprintf("       or\n");
+            Rprintf("- increase the absolute objective (safe).\n");
+            Rprintf("  Atm options=list(absrel=FALSE, relerror=%.5g)\n", paramsdouble[0]);
+            Rprintf("       or\n");
+            Rprintf("- increase the size of the grid (safe but increase calculation time).\n");
+            Rprintf("  Atm options=list(L=%d)\n", L);
+            Rprintf("  next possible value is: %d\n", (int) pow(2, log2(L)+1));
         }
-        error("error in ffb_integrate/diff_integrate");
-        return R_NilValue;
+        }
+        /* reset proj and proj3 at the last value */
+      memcpy(proj, projold, projsize);
+      memcpy(proj3, proj3old, projsize);
+      /*  reset copy of polycorn */
+      for (i=0; i<n_poly; i++)
+         memcpy(polycorn[i], polycornold[i], n_polycorn[i] * sizeof(POINT));
+      /* reset copy of centroid */
+       memcpy(centroidx, centroidxold, centroidsize);
+       memcpy(centroidy, centroidyold, centroidsize);
+      errorloc=-1; // to avoid error in next step
       }
+    if (errorloc>3) {
+      /* ------- free memory on error ------- */
+      /* FREEG1 ; */
+      /* done since 1.2-0 by cleancall */
+      /*---------- Unprotect. ----------------*/
+      UNPROTECT(16);
+      UNPROTECT(3); /* rygeom + rcentroidx2 + rcentroidy2*/
+      /* error internal loop does not succeed */
+        if ((errorloc==4)&&(options[0]>0)) {
+          if (options[3]>0) {
+            Rprintf("- increase maxit_internal (risky).\n");
+            Rprintf("  Atm, options=list(maxit_internal=%d)\n",options[4]);
+            Rprintf("       or\n");
+            Rprintf("- increase the relative objective (safe).\n");
+            Rprintf("  Atm options=list(absrel=TRUE, relerror=%.5g)\n", paramsdouble[0]);
+            Rprintf("       or\n");
+            Rprintf("- increase the size of the grid (safe but increase calculation time).\n");
+            Rprintf("  Atm options=list(L=%d)\n", L);
+          } else {
+            Rprintf("- increase maxit_internal (risky).\n");
+            Rprintf("  Atm, options=list(maxit_internal=%d)\n",options[4]);
+            Rprintf("       or\n");
+            Rprintf("- increase the absolute objective (safe).\n");
+            Rprintf("  Atm options=list(absrel=FALSE, relerror=%.5g)\n", paramsdouble[0]);
+            Rprintf("       or\n");
+            Rprintf("- increase the size of the grid (safe but increase calculation time).\n");
+            Rprintf("  Atm options=list(L=%d)\n", L);
+          }
+        }
+        if (errorloc==4) { //||(errorloc==5)) {
+        if (absrel)
+          error("algorithm failed (maxit_internal reached),\n  last relative criterion reached=%.7g", curcrit);
+        else
+          error("algorithm failed (maxit_internal reached),\n  last absolute criterion reached=%.7g", curcrit * scale_map * scale_map);
+        } else {
+          if (errorloc==6) error("User interruption");
+        }
+        return R_NilValue;
+    }
+    if ((errorloc>0)&(errorloc<4)) {
+      if (options[0]>0) {
+      Rprintf("Numerical error number (%d)\n", errorloc);
+      } else {
+        Rprintf(".");
+      }
+      errorloc = 0;
+    }
+
+       /* TRUE because we need to project the graticule too. */
       project(centroidx, centroidy, TRUE, options, &errorloc,
         n_polycorn, gridexport);
-       /* TRUE because we need to project the graticule too. */
       if (errorloc>0) {
         /* ------- free memory on error ------- */
         /* FREEG1 ; */
@@ -592,28 +736,38 @@ SEXP cartogramR (SEXP rcentroidx, SEXP rcentroidy, SEXP rygeomd,
         /*---------- Unprotect. ----------------*/
         UNPROTECT(16);
         UNPROTECT(3); /* rygeom + rcentroidx2 + rcentroidy2*/
-        error("error in project");
+        error("project() function failed");
         return R_NilValue;
       }
+      /* save a copy of proj3 (in proj3old) in case of error type 5 */
+       memcpy(proj3old, proj3, projsize);
+      /* save a copy of proj (in projold) in case of error type 5 */
+       memcpy(projold, proj, projsize);
+      /* Error of type 5 = algo stuck and emergency exit with old result */
+      /* save a copy of polycorn in case of error type 5 */
+       for (i=0; i<n_poly; i++)
+         memcpy(polycornold[i], polycorn[i], n_polycorn[i] * sizeof(POINT));
+      /* save a copy of centroids in case of error type 5 */
+       memcpy(centroidxold, centroidx, centroidsize);
+       memcpy(centroidyold, centroidy, centroidsize);
       /* Overwrite proj with proj2. */
-      for (i=0; i<lx; i++)
-        for (j=0; j<ly; j++) {
-          proj[i*ly + j].x = proj2[i*ly + j].x;
-          proj[i*ly + j].y = proj2[i*ly + j].y;
-        }
-    projtmp = proj;
-    proj = proj2;
-    proj2 = projtmp;
-        if (absrel) {
+       memcpy(proj, proj2, projsize);
+       if (absrel) {
         curcrit = max_area_err(area_err, cart_area, n_polycorn,
                                cartcorn, &cart_tot_area);
         if (options[0]>0) Rprintf("max. rel. area error: %f\n", curcrit);
       } else {
         curcrit = max_absarea_err(area_err, cart_area, n_polycorn,
                                   cartcorn, &cart_tot_area);
-        if (options[0]>0) Rprintf("max. abs. area error: %f\n", curcrit);
+        if (options[0]>0) Rprintf("max. abs. area error: %f\n", curcrit * scale_map * scale_map);
       }
+    if (errorloc==-1) {
+      /* we return what we have the algorithm have failed to reach
+       * requested criterion and is trapped  */
+      errorloc=5;
+      break;
     }
+    } /* end of while (additionnal integration loop) */
     /* Rescale all areas to perfectly match the total area before the          */
     /* integrations started.                                                   */
     correction_factor = sqrt(init_tot_area / cart_tot_area);
@@ -639,11 +793,13 @@ SEXP cartogramR (SEXP rcentroidx, SEXP rcentroidy, SEXP rygeomd,
        } else {
         curcrit = max_absarea_err(area_err, cart_area, n_polycorn,
                                 cartcorn, &cart_tot_area);
-        if (options[0]>1) Rprintf("after final correction, max. abs. area error: %f\n", curcrit);
+        if (options[0]>1) Rprintf("after final correction, max. abs. area error: %f\n", curcrit * scale_map * scale_map);
       }
       if (curcrit > MAX_PERMITTED_AREA_ERROR) {
         if (options[0]>1) Rprintf("------------------------------------------------------------------\n");
-        Rprintf("WARNING criterion: %f > Objective: %f\n Increase maxit or decrease Objective\n", curcrit, MAX_PERMITTED_AREA_ERROR);
+        if (options[0]>0) Rprintf("WARNING criterion: %6.g > Objective: %6.g\nReturned object will not be optimal\n",
+                                  curcrit * scale_map * scale_map,
+                                  MAX_PERMITTED_AREA_ERROR * scale_map * scale_map);
         if (options[0]>1) Rprintf("------------------------------------------------------------------\n");
       }
     /* -------------------------------------------------------- */
@@ -674,8 +830,8 @@ SEXP cartogramR (SEXP rcentroidx, SEXP rcentroidy, SEXP rygeomd,
       ransx = PROTECT(allocMatrix(REALSXP, 1, 1));
       ransy = PROTECT(allocMatrix(REALSXP, 1, 1));
     }
-    SET_VECTOR_ELT(rans, 5, ransx);
-    SET_VECTOR_ELT(rans, 6, ransy);
+    SET_VECTOR_ELT(rans, 6, ransx);
+    SET_VECTOR_ELT(rans, 7, ransy);
     /* -------------------------------------------------------- */
     /* export cartcorn (ugly global variable) to rygeom an R sf list */
     /* four  steps                                              */
@@ -780,9 +936,13 @@ SEXP cartogramR (SEXP rcentroidx, SEXP rcentroidy, SEXP rygeomd,
     }
     
     SET_VECTOR_ELT(rans, 2, rfinal_area);
+    if (!absrel)  {
+      curcrit=curcrit*scale_map * scale_map;
+    }
+    SET_VECTOR_ELT(rans, 5, ScalarReal(curcrit));
     /* -------------------------- end export------------------------- */
     /* ------------------------- Free memory. ----------------------- */
-  }
+  } /* end of else */
     /*------------------- End of main if then else ---------------*/
     /*------------------------ Free memory. ----------------------*/
     /* free(projinit); */

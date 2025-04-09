@@ -13,10 +13,6 @@ cartogramR_options(
 \arguments{
 \item{options}{a named list with some (or all) the following components:
 \itemize{
-\item maxit:  (all method) the maximum number of iterations,
-default to 50.
-\item maxit_internal:  (\verb{"gsm" or "gn"}) the maximum number of internal
-iterations, default to 10000.
 \item absrel:  (all method)  boolean, if \code{TRUE} relative convergence
 if \code{FALSE} absolute convergence (default to \code{TRUE})
 \item abserror: (all method) Areas on cartogram differ at most by an
@@ -31,15 +27,22 @@ default to 1000
 \eqn{max_\{polygons\} |area_on_cartogram / target_area - 1| <= relerror}
 (default to 0.01)
 \item reltol:  (\code{"dcn"}) the absolute convergence tolerance:
-\eqn{max_\{polygons\} abs((area(i) - area(i-1))/area(i-1)}
+\eqn{max_\{polygons\} abs(area(i) - area(i-1))/area(i-1)}
 default to 1e-3
 \item L: (\verb{"gsm" or "gn"}) integer, gives the value of \code{L} (default
 is 512), must be a power of two (for fftw)
+\item maxit:  (all method) the maximum number of iterations,
+default to 50 for \verb{"gsm" or "gn"} and 5000 for \code{"dcn"}.
+\item maxit_internal:  (\verb{"gsm" or "gn"}) the maximum number of internal
+iterations, default to 10000.
+\item min_deltat:  (\verb{"gsm" or "gn"}) the time step minimum, default to 1e-14.
 \item mp: (all method) if a region contains exactly zero population, it will be
 replaced by mp times the smallest (strictly) positive population in any
 region (default to 0.2)
 \item pf: (\verb{"gsm" or "gn"}) Determines space between map and boundary (default to 1.5)
 \item sigma: (\verb{"gsm" or "gn"}) Width of Gaussian blur to smoothen the density (default to 5)
+\item maxinc: (\verb{"gsm" or "gn"}) number of times algorithm is allowed to
+increase (default to 3)
 \item center: (\verb{"gsm" or "gn"}) either a character string
 (only possible choices are \code{"centroid"}
 or \code{"point_on_surface"}) or a function. If the
@@ -47,14 +50,22 @@ object is a function, it  will be used to
 calculate the "center" of polygons; \code{"point_on_surface"}
 will use the function \link[sf:geos_unary]{sf::st_point_on_surface}
 while \code{"centroid"} (the default) will use \link[sf:geos_unary]{sf::st_centroid}.
-\item verbose: (all method) integer giving the verbosity level
-(default to \code{0}, not verbose)
 \item grid: (\verb{"gsm" or "gn"}) boolean, if \code{TRUE} export the final
 grid from flow algorithm (default to \code{TRUE}). Setting to \code{FALSE}
 \item check.ring.dir: (all method) boolean, if \code{TRUE} controls polygons orientation
 (default to \code{TRUE})
 \item check.only: (all method) boolean, if \code{TRUE} control only polygons orientation
-and no replacement is done (default to \code{FALSE})
+\item check.duplicated: (all method) boolean, if \code{TRUE} controls
+if polygons have duplicated points (default to \code{TRUE})
+\item verbose: (all method) integer giving the verbosity level
+(default to \code{0}, not verbose)
+\item num_threads: (all method) int, number of threads (default to 1).
+For \code{"dcn"} used for centroid calculations.
+If multipolygons/regions have huge
+number of points it can be useful to set it to a small
+number (2 or 3 ?). For \code{"gsm"} useful for large grid.
+\code{num_threads=-1} means that open MP will choose the
+number of threads using maximum.
 }}
 
 \item{method}{the method to be used, can be one of the following:

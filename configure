@@ -1,0 +1,344 @@
+#!/usr/bin/env sh
+
+## this is an adaptation of data.table pkg configure
+
+
+# Let's keep this simple. If pkg-config is available, use it. Otherwise print
+# the helpful message to aid user if compilation does fail. Note 25 of R-exts:
+# "[pkg-config] is available on the machines used to produce the CRAN binary packages"
+# This script should pass `checkbashisms` for portability.
+
+msg=0
+############### FFTW3
+if ! pkg-config --version > config.log 2>&1
+then
+  printf "*** pkg-config is not installed.\n"
+  msg=1
+else
+  if ! pkg-config --exists fftw3
+  then
+    printf "*** pkg-config is installed but 'pkg-config --exists fftw3' did not return 0.\n"
+    printf "    please install FFTW (>=3.3.1)\n"
+    printf "    possible package: fftw-devel (rpm), libfftw3-dev (deb) or fftw (brew).\n"
+    msg=1
+  else
+    mylib=`pkg-config --libs fftw3`
+    mycflag=`pkg-config --cflags fftw3`
+    if ! printf "%s\n" "${mylib}" | grep -qE '[-]lfftw3($| )' >> config.log
+    then
+      printf "*** pkg-config is installed and 'pkg-config --exists fftw3' succeeds but\n"
+      printf "*** 'pkg-config --libs fftw3' returns '%s' which does not include the standard -lfftw3.\n" "${mylib}"
+      msg=1
+    fi
+  fi
+fi
+
+if [ $msg -ne 0 ]; then
+  printf "*** Compilation will now be attempted and if it works you can ignore this message.\n"
+  printf "*** However, if compilation fails, try 'locate fftw3.h' and\n"
+  printf "*** ensure the  FFTW (>=3.3.1) development library is installed :\n"
+  printf "***   deb: libfftw3-dev (Debian, Ubuntu, ...)\n"
+  printf "***   rpm: fftw-devel (Fedora, EPEL, ...)\n"
+  printf "***   brew: fftw.\n"
+else
+  version=`pkg-config --modversion fftw3`
+  printf "*** checking if FFTW %s is installed... yes\n" "${version}"
+fi
+
+############### Signal interrupt
+# Program to test if we have a sigcaption
+cat <<EOF > test-sigaction.c
+#include <stdlib.h>
+#include <signal.h>
+int main (void)
+{
+    struct sigaction sa;
+    siginfo_t si, *ip;
+    sigemptyset(&sa.sa_mask);
+    sa.sa_flags = SA_ONSTACK | SA_SIGINFO;
+    ip = &si;
+    {
+	void *addr = ip->si_addr;
+	int code = ip->si_code;
+    }
+    exit(0);
+}
+EOF
+
+# Program to test if we have a basic signal
+cat <<EOF > test-signal.c
+#include <stdlib.h>
+#include <signal.h>
+static  volatile sig_atomic_t keep_running = 1;
+static void intHandler(int _) {
+   (void)_;
+    keep_running = 0;
+}
+int main (void)
+{
+  keep_running=1;
+  signal(SIGINT, intHandler);
+  raise( SIGTERM );
+  if (!keep_running)
+    exit(0);
+  else
+    exit(1);
+}
+EOF
+
+# function to test sigaction/signal
+detect_sigaction () {
+  printf "%s" "*** checking if R installation supports sigaction... "
+  if "${R_HOME}/bin/R" CMD SHLIB test-sigaction.c >> config.log 2>&1; then
+    printf "yes\n"
+    export R_SIGACTION=1
+    return
+  else
+    export R_SIGACTION=0
+    printf "no\n"
+    printf "%s" "*** checking if R installation supports signal... "
+    if "${R_HOME}/bin/R" CMD SHLIB test-signal.c >> config.log 2>&1; then
+      printf "yes\n"
+      export R_SIGWIN=1
+      return
+    else
+      printf "no\n"
+      export R_SIGWIN=0
+    fi
+  fi
+}
+
+# run test signal/sigaction
+detect_sigaction
+# Clean up.
+rm -f test-sigaction.* test-signal.*  a.out
+
+
+############### OPENMP compatible compiler
+# Test if we have a OPENMP compatible compiler
+# Aside: ${SHLIB_OPENMP_CFLAGS} does not appear to be defined at this point according to Matt's testing on
+# Linux, and R CMD config SHLIB_OPENMP_CFLAGS also returns 'no information for variable'. That's not
+# inconsistent with R-exts$1.2.1.1, though, which states it's 'available for use in Makevars' (so not
+# necessarily here in configure). Hence use -fopenmp directly for this detection step.
+# printf not echo to pass checkbashisms\n
+MYPKG_CPPFLAGS="${PKG_CPPFLAGS}"
+MYPKG_CFLAGS="${PKG_CFLAGS}"
+MYPKG_LIBS="${PKG_LIBS}"
+disablematch=0
+
+cat <<EOF > test-omp.c
+#include <omp.h>
+int main() {
+  return omp_get_num_threads();
+}
+EOF
+
+detect_flagfopenmp_shared() {
+  if grep -qE "test[-]omp[.]so.*[-](fopenmp|lomp|lgomp)" config.log; then
+      export PKG_LIBS="${MYPKG_LIBS} \$(SHLIB_OPENMP_CFLAGS)"
+      return
+  else
+    export R_OPENMP_ENABLED=0
+  fi
+  return
+}
+detect_flagfopenmp() {
+  if grep -qE "[-]fopenmp.*test[-]omp[.]c" config.log; then
+      export PKG_CFLAGS="${MYPKG_CFLAGS} \$(SHLIB_OPENMP_CFLAGS)"
+      return
+  else
+    export R_OPENMP_ENABLED=0
+  fi
+  return
+}
+#https://github.com/Bioconductor/SparseArray/issues/9
+detect_disablematch() {
+  if grep -qE "clang.* [-]fopenmp.* test[-]omp[.]c" config.log; then
+      printf  "     undef match (for clang)\n"
+      export disablematch=1
+      return
+  fi
+  return
+}
+
+detect_openmpR() {
+    printf "%s" "**** checking if R installation supports OpenMP with R flags... "
+    if PKG_CFLAGS="${MYPKG_CFLAGS} \$(SHLIB_OPENMP_CFLAGS)"  PKG_LIBS="${MYPKG_LIBS} \$(SHLIB_OPENMP_CFLAGS)" "${R_HOME}/bin/R" CMD SHLIB test-omp.c >> config.log 2>&1; then
+      rm -f test-omp.*o a.out
+      # check flags -fopenmp
+      detect_flagfopenmp
+      if [ "${R_OPENMP_ENABLED}" = "0" ]; then
+        printf "no\n"
+        return
+      fi
+      detect_flagfopenmp_shared
+      if [ "${R_OPENMP_ENABLED}" = "0" ]; then
+        printf "no\n"
+        return
+      fi
+      export R_OPENMP_ENABLED=1
+      printf "yes\n"
+      detect_disablematch
+      return
+    else
+      rm -f test-omp.*o a.out
+      # no compilation
+      printf "no\n"
+    fi
+
+
+}
+
+detect_openmpGcc() {
+    printf "%s" "**** checking if R installation supports openmp with \"-fopenmp\" flag... "
+    if PKG_CFLAGS="${MYPKG_CFLAGS} -fopenmp"  PKG_LIBS="${MYPKG_LIBS} -fopenmp" "${R_HOME}/bin/R" CMD SHLIB test-omp.c >> config.log 2>&1; then
+      rm -f test-omp.*o a.out
+      printf "yes\n"
+      export PKG_CFLAGS="${MYPKG_CFLAGS} -fopenmp"
+      export PKG_LIBS="${MYPKG_LIBS} -fopenmp"
+      export R_OPENMP_ENABLED=1
+      detect_disablematch
+      return
+    else
+      rm -f test-omp.*o a.out
+      printf "no\n"
+    fi
+}
+
+detect_openmpXclang() {
+    printf "%s" "**** checking if R installation supports openmp with \"-Xclang -fopenmp\" flag... "
+    if PKG_CFLAGS="${MYPKG_CFLAGS} -Xclang -fopenmp"  PKG_LIBS="${MYPKG_LIBS} -lomp" "${R_HOME}/bin/R" CMD SHLIB test-omp.c > config.log 2>&1; then
+      rm -f test-omp.*o a.out
+      printf "yes\n"
+      export PKG_CFLAGS="${MYPKG_CFLAGS} -Xclang -fopenmp"
+      export PKG_LIBS="${MYPKG_LIBS} -lomp"
+      export disablematch=1
+      export R_OPENMP_ENABLED=1
+      return
+    else
+      rm -f test-omp.*o a.out
+      printf "no\n"
+    fi
+}
+
+detect_openmpUser() {
+    printf "%s" "**** checking if R installation supports openmp with User PKG_ flags... "
+    if PKG_CPPFLAGS="${MYPKG_CPPFLAGS}"   PKG_CFLAGS="${MYPKG_CFLAGS}"  PKG_LIBS="${MYPKG_LIBS} -lomp" "${R_HOME}/bin/R" CMD SHLIB test-omp.c >> config.log 2>&1; then
+      rm -f test-omp.*o a.out
+      detect_flagfopenmp
+      if [ "${R_OPENMP_ENABLED}" = "0" ]; then
+        printf "no\n"
+        return
+      else
+        detect_flagfopenmp_shared
+        if [ "${R_OPENMP_ENABLED}" = "0" ]; then
+          printf "no\n"
+          return
+        fi
+      fi
+      printf "yes\n"
+      export PKG_CPPFLAGS="${MYPKG_CPPFLAGS}"
+      export PKG_CFLAGS="${MYPKG_CFLAGS}"
+      export PKG_LIBS="${MYPKG_LIBS}"
+      detect_disablematch
+      export R_OPENMP_ENABLED=1
+      return
+    else
+      rm -f test-omp.*o a.out
+      printf "no\n"
+    fi
+}
+
+detect_openmpBrew() {
+      if [ "$(uname -m)" = "arm64" ]; then
+        HOMEBREW_PREFIX=/opt/homebrew
+      else
+        HOMEBREW_PREFIX=/usr/local
+      fi
+      if [ -e "${HOMEBREW_PREFIX}/opt/libomp" ]; then
+        printf "%s" "**** checking if libomp installation at ${HOMEBREW_PREFIX}/opt/libomp can be used... "
+        LIBOMP_INCLUDE="-I${HOMEBREW_PREFIX}/opt/libomp/include"
+        LIBOMP_LINK="-L${HOMEBREW_PREFIX}/opt/libomp/lib -lomp"
+        if PKG_CFLAGS="${MYPKG_CFLAGS} -Xclang -fopenmp" PKG_CPPFLAGS="${MYPKG_CPPFLAGS} ${LIBOMP_INCLUDE}" PKG_LIBS="${MYPKG_LIBS} ${LIBOMP_LINK}" "${R_HOME}/bin/R" CMD SHLIB test-omp.c >> config.log 2>&1; then
+          rm -f test-omp.*o a.out
+          printf "yes\n"
+          export PKG_CPPFLAGS="${MYPKG_CPPFLAGS} ${LIBOMP_INCLUDE}"
+          export PKG_CFLAGS="${MYPKG_CFLAGS}  -Xclang -fopenmp"
+          export PKG_LIBS="${PKG_LIBS} ${LIBOMP_LINK}"
+          export R_OPENMP_ENABLED=1
+          export disablematch=1
+          return
+        else
+          rm -f test-omp.*o a.out
+          printf "no\n"
+       fi
+      fi
+}
+detect_openmp () {
+  printf "*** checking if R installation supports openMP:\n"
+  detect_openmpR
+  if  [ "${R_OPENMP_ENABLED}" = "1" ]; then
+    return
+  fi
+  detect_openmpUser
+  if  [ "${R_OPENMP_ENABLED}" = "1" ]; then
+    return
+  fi
+  detect_openmpGcc
+  if  [ "${R_OPENMP_ENABLED}" = "1" ]; then
+    return
+  fi
+  detect_openmpXclang
+  if  [ "${R_OPENMP_ENABLED}" = "1" ]; then
+    return
+  fi
+  if [ "$(uname)" = "Darwin" ]; then
+    detect_openmpBrew
+    if  [ "${R_OPENMP_ENABLED}" = "1" ]; then
+      return
+    fi
+  fi
+  # No support for OpenMP available
+  export R_OPENMP_ENABLED=0
+}
+# run openMP tests
+detect_openmp
+# Clean up.
+rm -f test-omp.* a.out
+
+############################### Making Makevars #################################
+if [ "${R_OPENMP_ENABLED}" = "0" ]; then
+  printf "***\n"
+  printf "*** OpenMP not supported! cartogramR uses OpenMP to automatically\n"
+  printf "***   parallelize loops for flow based cartogram mainly\n"
+  printf "*** Continuing installation without OpenMP support...\n"
+  printf "***\n"
+  sed -e "s|@disablematch@||" src/Makevars.in > src/Makevars
+else
+  if [ "${disablematch}" = "0" ]; then
+    sed -e "s|@disablematch@||" src/Makevars.in > src/Makevars
+  else
+    sed -e "s|@disablematch@|-DR_DISABLEMATCH|" src/Makevars.in > src/Makevars
+  fi
+fi
+
+# retain user supplied PKG_ env variables, #4664. See comments in Makevars.in too.
+sed -e "s|@PKG_CPPFLAGS@|$PKG_CPPFLAGS|" src/Makevars > src/Makevars.tmp && mv src/Makevars.tmp src/Makevars
+sed -e "s|@PKG_CFLAGS@|$PKG_CFLAGS|" src/Makevars > src/Makevars.tmp && mv src/Makevars.tmp src/Makevars
+sed -e "s|@PKG_LIBS@|$PKG_LIBS|" src/Makevars > src/Makevars.tmp && mv src/Makevars.tmp src/Makevars
+
+# fftw
+sed -e "s|@fftw_cflags@|${mycflag}|" src/Makevars > src/Makevars.tmp && mv src/Makevars.tmp src/Makevars
+sed -e "s|@fftw_libs@|${mylib}|" src/Makevars > src/Makevars.tmp && mv src/Makevars.tmp src/Makevars
+
+# sigaction/signal
+if [ "${R_SIGACTION}" = "1" ]; then
+  sed -e "s|@sigaction_ok@|-DR_SIGACTION=${R_SIGACTION}|" src/Makevars > src/Makevars.tmp && mv src/Makevars.tmp src/Makevars
+else
+  if [ "${R_SIGWIN}" = "1" ]; then
+    sed -e "s|@sigaction_ok@|-DR_SIGWIN=${R_SIGWIN}|" src/Makevars > src/Makevars.tmp && mv src/Makevars.tmp src/Makevars
+  else
+    sed -e "s|@sigaction_ok@||" src/Makevars > src/Makevars.tmp && mv src/Makevars.tmp src/Makevars
+  fi
+fi
+exit 0

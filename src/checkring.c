@@ -59,7 +59,7 @@ SEXP checkring (SEXP rygeom, SEXP rmultipoly, SEXP roptions)
   /* local variables */
   /************************************************************************/
   Rboolean change;
-  int i, j, jj, k, *check;
+  int i, j, jj, k, *check; /* check will be initialized */
   /* process options */
   /* option 1 is : change the sf object or check only ? */
   if (options[0]>0)   change = TRUE; else change = FALSE;
@@ -83,7 +83,7 @@ SEXP checkring (SEXP rygeom, SEXP rmultipoly, SEXP roptions)
 
 
   SEXP rlistcoord,  rcoordvert, rlistmulti;
-  SEXP rlistcoord2,  rcoordvert2, rlistmulti2;
+  SEXP rlistcoord2,  rcoordvert2, rlistmulti2;/* rlistmulti2 will be initialized */
   double *coordvert, *coordvert2, area;
   for (i=0; i<n_rows; i++) {
     rlistcoord = PROTECT(VECTOR_ELT(rygeom, i));

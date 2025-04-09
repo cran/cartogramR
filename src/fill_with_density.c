@@ -28,6 +28,7 @@
 #include <string.h>
 #include "cartogram.h"
 #include "inside_functions.h"
+#include "myomp.h"
 
 /***************************** Global variables. *****************************/
 
@@ -334,16 +335,18 @@ void fill_with_density1 (double* centroidx, double* centroidy,
 /* - does not produce a map,                                                 */
 /* - does not perform a Gaussian blur.                                       */
 
-void fill_with_density2 (int* n_polycorn)
+void fill_with_density2 (int* n_polycorn, int *options)
 {
   double avg_dens, *dens, *tmp_area, tot_target_area, tot_tmp_area;
-  int i, j;
+  int i, j, nthreads;
 
+  nthreads=options[6];
   /* Copy cartcorn[][] to polycorn[][]. */
 
-  for (i=0; i<n_poly; i++)
-    for (j=0; j<n_polycorn[i]; j++)
-      polycorn[i][j] = cartcorn[i][j];
+   for (i=0; i<n_poly; i++)
+     memcpy(polycorn[i], cartcorn[i], n_polycorn[i] * sizeof(POINT));
+  /*   for (j=0; j<n_polycorn[i]; j++) */
+  /*     polycorn[i][j] = cartcorn[i][j]; */
 
   /***************************** Allocate memory. ****************************/
 
@@ -377,13 +380,19 @@ void fill_with_density2 (int* n_polycorn)
 
   /************************** Digitize the density. **************************/
 
-  for (i=0; i<lx; i++)
+  if (nthreads == -1) nthreads= omp_get_num_procs() ;
+#pragma omp parallel for \
+  private(j)  \
+  num_threads(nthreads) \
+  if (nthreads>1)
+  for (i=0; i<lx; i++) {
     for (j=0; j<ly; j++) {
       if (xyhalfshift2reg[i][j]==-1)
-	rho_init[i*ly+j] = avg_dens;
+        rho_init[i*ly+j] = avg_dens;
       else
-	rho_init[i*ly+j] = dens[xyhalfshift2reg[i][j]];
+        rho_init[i*ly+j] = dens[xyhalfshift2reg[i][j]];
     }
+  }
   fftw_execute(plan_fwd);
 
   /******************************* Free memory. ******************************/

@@ -67,7 +67,7 @@ double polygon_area (int ncrns, POINT *polygon);
 void fill_with_density1 (double* centroidx, double* centroidy,
 			 int* n_polycorn, double* varregion,
 			 int* nb_polyinreg, int* options,double*  original_area);
-void fill_with_density2 (int* n_polycorn);
+void fill_with_density2 (int* n_polycorn, int *options);
 double interpol (double x, double y, double *grid, char zero, int* options, int* error_ptr) ;
 void read_gen (int* nb_polyinreg, int* options);
 void ffb_integrate (int* options, int* error_ptr);

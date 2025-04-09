@@ -1,0 +1,3 @@
+PKG_CFLAGS = @PKG_CFLAGS@ @fftw_cflags@
+PKG_CPPFLAGS = @PKG_CPPFLAGS@ @disablematch@ @sigaction_ok@
+PKG_LIBS = @PKG_LIBS@ @fftw_libs@

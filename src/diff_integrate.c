@@ -24,6 +24,9 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <math.h>
+#if defined(R_SIGACTION) ||  defined(R_SIGWIN)
+#include <signal.h>
+#endif
 #include "cartogram.h"
 
 /******************************** Definitions. *******************************/
@@ -100,7 +103,7 @@ void diff_calcv (double t, int* options, int* error_ptr)
     for (j=0; j<ly; j++) {
       if (rho[i*ly + j] <= 0.0) {
 	if (options[0]>0) {
-	  Rprintf("ERROR: division by zero in diff_calcv()\n");
+	  Rprintf("ERROR: division by zero or negative density in diff_calcv()\n");
 	  Rprintf("rho[%d, %d] = %e\n", i, j, rho[i*ly + j]);
 	}
 	*error_ptr=3;
@@ -116,14 +119,34 @@ void diff_calcv (double t, int* options, int* error_ptr)
 
 /*****************************************************************************/
 /* Function to integrate the equations of motion with the diffusion method.  */
-
-void diff_integrate (int* options,int* error_ptr)
+#if defined(R_SIGACTION) || defined(R_SIGWIN)
+static  volatile sig_atomic_t keep_running = 1;
+static void intHandler(int _) {
+   (void)_;
+    keep_running = 0;
+}
+#endif
+void diff_integrate (int* options, int* error_ptr)
 {
   Rboolean accept;
   double delta_t, max_change, t, *vx_intp, *vx_intp_half, *vy_intp,
     *vy_intp_half;
   int iter, k;
   POINT *eul, *mid;
+  /* signals */
+#if defined(R_SIGACTION)
+  keep_running=1;
+  struct sigaction act;
+  act.sa_handler = intHandler;
+  sigemptyset(&act.sa_mask);
+  act.sa_flags = 0;
+  sigaction(SIGINT, &act, NULL);
+#elif defined(R_SIGWIN)
+  keep_running=1;
+  signal(SIGINT, intHandler);
+#else
+  int keep_running=1;
+#endif
   /*************** Allocate memory for the Fourier transforms. ***************/
   rho = fftw_malloc(lx * ly * sizeof(double));
   gridvx = fftw_malloc(lx * ly * sizeof(double));
@@ -325,8 +348,9 @@ void diff_integrate (int* options,int* error_ptr)
 		       (mid[k].y-proj[k].y)*(mid[k].y-proj[k].y),
 		       max_change);
     if (options[0]>1) if (iter % 10 == 0) Rprintf("iter = %d, t = %e, delta_t = %e, max_change = %e\n",iter, t, delta_t, max_change);
-    if (iter > options[4]) {
-      if (options[0]>1) Rprintf("Number of iterations > maxit_internal:\n exiting diff_integrate too early\n");
+    if ((iter > options[4])||(log10(delta_t)< (- options[5]))) {
+      if (options[0]>1 && (iter > options[4])) Rprintf("Number of iterations > maxit_internal:\n exiting diff_integrate too early\n");
+      if (options[0]>1 &&  (log10(delta_t)< (- options[5]))) Rprintf("Delta_t too small:\n exiting diff_integrate too early\n");
       /* Free memory. */
       fftw_destroy_plan(plan_rho);
       fftw_destroy_plan(plan_gridvx);
@@ -340,6 +364,8 @@ void diff_integrate (int* options,int* error_ptr)
       free(vy_intp);
       free(vx_intp_half);
       free(vy_intp_half);
+      if (iter > options[4])  error_ptr[0]=4;
+      if (log10(delta_t)< (- options[5]))  error_ptr[0]=5;
       return ;
     }
     
@@ -352,8 +378,8 @@ void diff_integrate (int* options,int* error_ptr)
 	proj[k].y = mid[k].y;
       }
     delta_t *= INC_AFTER_ACC;           /* Try a larger step size next time. */
-  } while ((max_change > CONV_MAX_CHANGE && t < MAX_T && iter < MAX_ITER)
-	   || t < MIN_T);
+  } while (((max_change > CONV_MAX_CHANGE && t < MAX_T && iter < MAX_ITER)
+	   || t < MIN_T) && (keep_running)) ;
 
   /* Free memory. */
   
@@ -370,5 +396,7 @@ void diff_integrate (int* options,int* error_ptr)
   free(vx_intp_half);
   free(vy_intp_half);
   
+  /* signal error */
+  if (!keep_running) error_ptr[0]=6;
   return;
 }

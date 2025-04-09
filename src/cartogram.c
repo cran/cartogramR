@@ -26,6 +26,7 @@
 #include <stdlib.h>
 #include <math.h>
 #include "cartogram.h"
+#include "myomp.h"
 
 /**************************** Function prototypes. ***************************/
 
@@ -40,44 +41,54 @@ void project (double* centroidx, double* centroidy, Rboolean proj_graticule,
 	      int* options, int* error_ptr, int* n_polycorn, Rboolean gridexport)
 {
   double *xdisp, x2, *ydisp, y2, ctx, cty;
-  int i, j;
+  int i, j, nthreads;
+  int errorloc=0;
 
   /* The displacement vector (xdisp[i*ly+j], ydisp[i*ly+j]) is the point     */
   /* that was initially at (i+0.5, j+0.5). We work with (xdisp, ydisp)       */
   /* instead of (proj.x, proj.y) so that we can use the function interpol()  */
   /* defined in integrate.c.                                                 */
-
+  nthreads=options[6];
   xdisp = (double*) malloc(lx * ly * sizeof(double));
   ydisp = (double*) malloc(lx * ly * sizeof(double));
-  for (i=0; i<lx; i++)
+  if (nthreads == -1) nthreads= omp_get_num_procs() ;
+#pragma omp parallel for                        \
+  private(j)                                    \
+  num_threads(nthreads)                         \
+  if (nthreads>1)
+  for (i=0; i<lx; i++) {
     for (j=0; j<ly; j++) {
       xdisp[i*ly + j] = proj[i*ly + j].x - i - 0.5;
       ydisp[i*ly + j] = proj[i*ly + j].y - j - 0.5;
     }
-
+  }
   /********************* Project the polygon coordinates. ********************/
 
-  for (i=0; i<n_poly; i++)
+    if (nthreads == -1) nthreads= omp_get_num_procs() ;
+#pragma omp parallel for                        \
+  private(j, ctx, cty)                          \
+  reduction(max: errorloc)                      \
+  num_threads(nthreads)                         \
+  if (nthreads>1)
+  for (i=0; i<n_poly; i++) {
     for (j=0; j<n_polycorn[i]; j++) {
+      ctx = polycorn[i][j].x;
+      cty = polycorn[i][j].y;
       cartcorn[i][j].x =
-        interpol(polycorn[i][j].x, polycorn[i][j].y, xdisp, 'x', options, error_ptr)
-        + polycorn[i][j].x;
-      if (*error_ptr>0) {
-        free(xdisp);
-        free(ydisp);
-        return ;
-      }
+        interpol(polycorn[i][j].x, polycorn[i][j].y, xdisp, 'x', options, &errorloc)
+        + ctx;
       cartcorn[i][j].y =
-        interpol(polycorn[i][j].x, polycorn[i][j].y, ydisp, 'y', options, error_ptr)
-        + polycorn[i][j].y;
-      if (*error_ptr>0) {
-        free(xdisp);
-        free(ydisp);
-        return ;
-      }
+        interpol(polycorn[i][j].x, polycorn[i][j].y, ydisp, 'y', options, &errorloc)
+        + cty;
     }
-
-  if (gridexport) {
+  }
+  if (errorloc>0) {
+    *error_ptr=errorloc;
+      free(xdisp);
+      free(ydisp);
+      return ;
+  }
+   if (gridexport) {
     for (i=0; i<lx; i++)
       for (j=0; j<ly; j++) {
         ctx = proj3[i*ly + j].x ;
@@ -87,7 +98,7 @@ void project (double* centroidx, double* centroidy, Rboolean proj_graticule,
         proj3[i*ly + j].y = interpol(ctx, cty, ydisp, 'y', options, error_ptr) + cty;
       }
   }
-    /****************** Project proj2 on the basis of proj. ******************/
+   /****************** Project proj2 on the basis of proj. ******************/
   if (proj_graticule) {
     for (i=0; i<lx*ly; i++) {
       x2 = proj2[i].x;
@@ -106,24 +117,24 @@ void project (double* centroidx, double* centroidy, Rboolean proj_graticule,
       	}
     }
 	}	
-    /****************** Project centroid coordinate ******************/
+  /****************** Project centroid coordinate ******************/
 
-    for (i=0; i<n_reg; i++) {
-      ctx = centroidx[i];
-      cty = centroidy[i];
-      centroidx[i] = interpol(ctx, cty, xdisp, 'x', options, error_ptr) + ctx;
-      if (*error_ptr>0)  {
-	free(xdisp);
-	free(ydisp);
-	return ;
-      }
-      centroidy[i] = interpol(ctx, cty, ydisp, 'y', options, error_ptr) + cty;
-      if (*error_ptr>0)  {
-	free(xdisp);
-	free(ydisp);
-	return ;
-      }
+  for (i=0; i<n_reg; i++) {
+    ctx = centroidx[i];
+    cty = centroidy[i];
+    centroidx[i] = interpol(ctx, cty, xdisp, 'x', options, error_ptr) + ctx;
+    if (*error_ptr>0)  {
+      free(xdisp);
+      free(ydisp);
+      return ;
     }
+    centroidy[i] = interpol(ctx, cty, ydisp, 'y', options, error_ptr) + cty;
+    if (*error_ptr>0)  {
+      free(xdisp);
+      free(ydisp);
+      return ;
+    }
+  }
 
   /******************************* Free memory. ******************************/
 
@@ -200,3 +211,4 @@ double max_absarea_err (double *area_err, double *cart_area,  int* n_polycorn,
 
   return max;
 }
+
