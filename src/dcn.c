@@ -49,9 +49,6 @@ static void intHandlerg(int _) {
  *         POL=(EXT1 HOLE2 HOLE3...)
  * \param  rml2: vector int  [1:n]; the ith coordinate gives the
  *          polygon number  (starting at 1) of vertice i.
- * \param  rl3: vector int [1:n] L3 column of sf::st_coordinates gives
- *         the integer 1,2, 3 got in the following list
- *         (MPOL1 MPOL2 MPOL3...) ie the region number (starting at 1)
  * \param rdup: vector [1:n] if the coordinate k is a vertice with
  *        duplicates (k1, k2 ...) it gives the next indice k1
  *        if no duplicate exists it is 0
@@ -93,7 +90,7 @@ static void intHandlerg(int _) {
 * ******************************************************************/
 
 SEXP dcn (SEXP rygeomd, SEXP rx, SEXP ry, SEXP rcount,
-          SEXP rl1, SEXP rml2, SEXP rl3,  SEXP rdup, SEXP rlast,
+          SEXP rl1, SEXP rml2, SEXP rdup, SEXP rlast,
           SEXP rparamint, SEXP rparamdouble, SEXP roptions, SEXP rdebuts,
           SEXP rdebutsp)
 {
@@ -115,22 +112,20 @@ SEXP dcn (SEXP rygeomd, SEXP rx, SEXP ry, SEXP rcount,
   relerror = paramdouble[0];
   reltol = paramdouble[1];
   MIN_POP_FAC = paramdouble[2];
-  /* integer : l1, l2, l3, paramint, options, debuts, debutsp  */
+  /* integer : l1, l2, paramint, options, debuts, debutsp  */
   rl1 = PROTECT(rl1);
   rml2 = PROTECT(rml2);
-  rl3 = PROTECT(rl3);
   rdup = PROTECT(rdup);
   rlast = PROTECT(rlast);
   rparamint = PROTECT(rparamint);
   roptions = PROTECT(roptions);
   rdebuts = PROTECT(rdebuts);
   rdebutsp = PROTECT(rdebutsp);
-  int *l1, *ml2, *l3, *dup, *last, *paramint,
+  int *l1, *ml2, *dup, *last, *paramint,
     maxit, np, verbose, absrel, nthreads, *options, *debuts,
     *debutsp, maxinc;
   l1 = INTEGER(rl1);
   ml2 = INTEGER(rml2);
-  l3 = INTEGER(rl3);
   dup = INTEGER(rdup);
   last = INTEGER(rlast);
   paramint = INTEGER(rparamint);
@@ -320,11 +315,11 @@ SEXP dcn (SEXP rygeomd, SEXP rx, SEXP ry, SEXP rcount,
         Rprintf("  Objective err. is not met: actual error=%.5g > objective=%.5g\n",
                 maxrelError, relerror);
         Rprintf(" If the result does not satisfy your needs, please\n");
-        Rprintf("  - increase verbosity level (to understand the problem),");
+        Rprintf("  - increase verbosity level (to understand the problem),\n");
         Rprintf("  - increase maxit,\n");
         Rprintf("  - increase maxinc (risky),\n");
         Rprintf("  - increase maxrelError and maxrelTol\n");
-        Rprintf(" in cartogramR() options.");
+        Rprintf(" in cartogramR() options.\n");
         break;
       }
     /* if we reach objective stop */
@@ -484,7 +479,7 @@ SEXP dcn (SEXP rygeomd, SEXP rx, SEXP ry, SEXP rcount,
   crits[1]=maxrelTol;
   SET_VECTOR_ELT(rans, 5, rcrits);
    /* unprotect and return */
-   UNPROTECT(14); /* args of dcn */
+   UNPROTECT(13); /* args of dcn */
    UNPROTECT(6); /* creation: rans, rygeom, rareasinit rareasp rcdgpx rcdgpy */
    UNPROTECT(3); /* class and attributes */
    UNPROTECT(1); /* rcrits */

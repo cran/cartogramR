@@ -16,8 +16,9 @@ static const R_CallMethodDef R_CallDef[] = {
   CALLDEF(invcarto, 7),
   CALLDEF(gridanalysis, 3),
   CALLDEF(geomcarto, 8),
-  CALLDEF(dcn, 15),
-  CALLDEF(checkring, 3),
+  CALLDEF(dcn, 13),
+  CALLDEF(checkringcorrect, 2),
+  CALLDEF(checkringnocorrect, 2),
   CALLDEF(cartogramR, 12),
    {NULL, NULL, 0}
 };

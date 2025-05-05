@@ -158,10 +158,9 @@ if (method=="dcn") {
   results <- .Call(carto_dcn, y_geom, coord[,X], coord[,Y],
                    trimCountVar, as.integer(coord[,L1]),
                    as.integer(coord[,L2]),
-                   as.integer(coord[,L3]),
                    as.integer(coord[,rdup]),
                    as.integer(coord[,rlast]), as.integer(paramsint), paramsdouble, as.integer(currentoptions$option),
-                   as.integer(debuts), as.integer(debutsp), as.integer(debutspol))
+                   as.integer(debuts), as.integer(debutsp))
   actualcrit <- results[[6]]
   results <- results[-6]
   for (i in 2:5) results[[i]] <- results[[i]][1:n_reg]

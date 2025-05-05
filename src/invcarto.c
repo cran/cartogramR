@@ -441,9 +441,20 @@ void inv_project2 (POINT *proj, int lx, int ly, POINT *invproj2,
   tri = (POINT**) malloc(4 * lx * ly * sizeof(POINT*));
   for (i=0; i<4*lx*ly; i++)
     tri[i] = (POINT*) malloc(3 * sizeof(POINT));
-  xyhalfshift2tri = (int**) malloc(lx * sizeof(int*));
-  for (i=0; i<lx; i++)
-    xyhalfshift2tri[i] = (int*) malloc(ly * sizeof(int));
+  if ( lx > 0 )  {
+    /* dumb case to keep compiler happy */
+      xyhalfshift2tri = (int**) malloc(lx * sizeof(int*));
+      for (i=0; i<lx; i++)
+	xyhalfshift2tri[i] = (int*) malloc(ly * sizeof(int));
+  } else {
+    /* dumb init  */
+    Rprintf("the map dimension is understood non positive int: bug\n");
+    /* dumb init to make compiler happy */
+    xyhalfshift2tri = (int**) malloc(sizeof(int*));
+    for (i=0; i<1; i++)
+      xyhalfshift2tri[i] = (int*) malloc(sizeof(int));
+  }
+
 
   /* The displacement vector (xdisp[i*ly+j], ydisp[i*ly+j]) is the point     */
   /* that was initially at (i+0.5, j+0.5). We work with (xdisp, ydisp)       */

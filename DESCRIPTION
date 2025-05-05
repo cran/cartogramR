@@ -1,6 +1,6 @@
 Package: cartogramR
-Version: 1.5-0
-Date: 2025-04-09
+Version: 1.5-1
+Date: 2025-05-05
 Title: Continuous Cartogram
 Depends: R (>= 3.5.0)
 Imports: sf, data.table, cleancall
@@ -22,11 +22,11 @@ SystemRequirements: FFTW (>=3.3.1); possible package: fftw-devel (rpm),
         libfftw3-dev (deb) or fftw (brew).
 RoxygenNote: 7.2.3
 NeedsCompilation: yes
-Packaged: 2025-04-09 19:07:55 UTC; pac
+Packaged: 2025-05-05 16:44:50 UTC; pac
 Author: Pierre-Andre Cornillon [aut, cre],
   Florent Demoraes [aut],
   Flow-Based-Cartograms [cph] (Author of core C code for gsm and gn
     procedures)
 Maintainer: Pierre-Andre Cornillon <pierre-andre.cornillon@univ-rennes2.fr>
 Repository: CRAN
-Date/Publication: 2025-04-09 23:10:02 UTC
+Date/Publication: 2025-05-05 17:20:02 UTC

@@ -1,4 +1,4 @@
-afa4b21252ef039b64098cb755b7480e *DESCRIPTION
+c994c9245da6b3ce6c78358418db6bf1 *DESCRIPTION
 c684a6b0320d2e965ddd4f3e44bbd493 *LICENSE
 f742fccc43a20b6ed8c5f5aedcaf3ab0 *NAMESPACE
 2aa075167bebb38474b2ca0d32a91bcd *R/as.sf.R
@@ -7,9 +7,9 @@ de7e7414177b908e4cf6e1d5743f37f7 *R/as.sf.cartogramR.R
 77c236be54e9c48f49ad5146aa13e877 *R/as.sfc.cartogramR.R
 f17148dd8ee0621115655e05fa7a9f62 *R/as.sfmultipolygon.R
 4abce49aeb18285c9d3d24cbc6ba104b *R/cartogramR-deprecated.R
-f3a7fb58113bf836f4f89c89538f73ec *R/cartogramR.R
+33506ab91e5210a2f5444ad9ea348f12 *R/cartogramR.R
 a648cec54efb638cf387bf9dd237cf01 *R/cartogramR_options.R
-d1d4e77bf81bb19a4c9e54ac68f2c935 *R/check_ring_dir.R
+8ce9f986d5c85981f462b41d070b8533 *R/check_ring_dir.R
 551cbb6f171d448b971ecea8cfe96112 *R/dist_between_vertices.R
 9b61216edac2c3278d0c6880fb26e669 *R/from_coord_polygon.R
 3479e3019764281b71dd18b6bf7f55b7 *R/geom_cartogramR.R
@@ -70,10 +70,10 @@ ef50146e81ccde4e64ef5d2d0c56ae08 *src/caracmap.h
 677b8b5494cde642311e79c01ea50581 *src/cartogram.c
 c8d6be1a5675611b8d5b06c474ab03d4 *src/cartogram.h
 5d56eb07ccd2da4e0d8d349d0adb7382 *src/cartogramR.c
-87227cdb13a6a210b51ac1c6fca9902e *src/checkring.c
-f514bbb57d9402b7e1e27bb864602180 *src/checkring.h
-fcca5d2c0be82442363ae7ec4cf69de5 *src/dcn.c
-071bacd23d9cc39a27695f0939e13ba5 *src/dcn.h
+af36e6e92e2381e19f324a4e72cf9f75 *src/checkring.c
+a51bc97f3817c9ad131b5a4c74f0fadc *src/checkring.h
+47b1bf55c9edb9e6c4382f6b20f6e466 *src/dcn.c
+9232390135a42d5f6ccb561ee77fa298 *src/dcn.h
 ce28d173a0b8a407460e612f36a301aa *src/diff_integrate.c
 98deea305614a02f672e02c56b078d3a *src/ffb_integrate.c
 17699b8cf1afa65d1dc7e10caacc60ba *src/fill_with_density.c
@@ -81,12 +81,12 @@ ce28d173a0b8a407460e612f36a301aa *src/diff_integrate.c
 9adb4d51e4f199d61f7deb47941ea7c6 *src/geomcarto.h
 f150db1cde92bba1a804730327d116d6 *src/gridanalysis.c
 802ebc8dd650cd6fd86453a0da5c7678 *src/gridanalysis.h
-fbe5edd77365571fd8979d6bd1850306 *src/init.c
+bf25b7c2012a575cd879648f07cf8004 *src/init.c
 1d4cea382ab1b85acb495345fe098090 *src/inside_functions.c
 40767c32c87ab3443825628747745919 *src/inside_functions.h
 96d144688b070037cd1d73f96e9d20bf *src/interpol2.c
 afcccc8d1dd0023f2a70ba2fc7156b95 *src/interpol2.h
-e1091dcb66cb7b9ac0fd38e135f3118b *src/invcarto.c
+62991f2d1b3fcfb8a7c7c840d93d8fb4 *src/invcarto.c
 eba4d747f0dd93f151a26d52864b2ba1 *src/invcarto.h
 2266872c18b0fe4b693e0eac403f7712 *src/iocartogramR.c
 09375f6502c473058b7c1b38ad5f4b71 *src/makegraticule.c
